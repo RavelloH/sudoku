@@ -1,36 +1,147 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+ # RavelloH's Sudoku
 
-## Getting Started
+一个精美的在线数独游戏，具有丰富的功能和优雅的用户界面。
 
-First, run the development server:
+## 🌟 特性
 
+### 核心功能
+- **挑战模式**: 自动生成数独谜题，支持计时和成绩记录
+- **批量生成**: 批量生成数独谜题并支持打印
+- **自动解题**: 智能解题助手，实时提示可填入的数字
+- **历史记录**: 完整的游戏历史记录和回放功能
+
+### 游戏体验
+- **6个难度等级**: 简单、中等、困难、专家、大师、极限
+- **智能提示**: 自动检测冲突并高亮显示
+- **无限撤销/恢复**: 完整的操作历史记录
+- **移动端友好**: 专为触屏设备优化的输入方式
+- **完成庆祝**: 精美的完成动画和效果
+
+### 界面与主题
+- **亮色/暗色模式**: 自动适应系统主题
+- **响应式设计**: 完美适配各种屏幕尺寸
+- **精美UI**: 基于 shadcn/ui 组件库
+- **流畅动画**: 使用 Framer Motion 实现
+
+## 🎮 游戏模式
+
+### 挑战模式
+- 默认游戏模式
+- 自动生成指定难度的数独谜题
+- 实时计时和智能提示
+- 完成后显示用时并记录成绩
+
+### 批量生成模式
+- 一次性生成多个数独谜题
+- 支持选择难度和数量
+- 可导出打印格式
+
+### 自动解题模式
+- 输入已知数字
+- 实时显示可确定的格子（灰色数字）
+- 检测冲突并提示
+- 自动完成求解
+
+### 历史记录模式
+- 查看所有游戏记录
+- 包含开始时间、完成时长、难度等信息
+- 支持重新开始已完成的棋局
+- 继续未完成的棋局
+- 删除不需要的记录
+
+## 🎯 智能功能
+
+### 智能提示
+- 检测同行、同列、同宫重复数字
+- 高亮冲突区域和数字
+- 提供下一步操作建议和理由
+
+### 移动端输入
+- **点按**: 弹出数字轮盘
+- **长按**: 弹出轮盘并可拖拽选择
+- 包含 1-9 数字和删除选项
+
+### 操作记录
+- 记录所有用户操作
+- 支持无限撤销和恢复
+- 完整的回放功能
+
+## 🛠 技术栈
+
+- **框架**: Next.js 15 (App Router)
+- **UI库**: shadcn/ui + Tailwind CSS
+- **动画**: Framer Motion
+- **图标**: Lucide React
+- **通知**: Sonner
+- **主题**: next-themes
+- **特效**: canvas-confetti
+- **语言**: TypeScript
+
+## 🚀 开始使用
+
+### 安装依赖
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 运行开发服务器
+```bash
+pnpm dev
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+在浏览器中打开 [http://localhost:3000](http://localhost:3000)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 构建生产版本
+```bash
+pnpm build
+```
 
-## Learn More
+## 📱 使用说明
 
-To learn more about Next.js, take a look at the following resources:
+### 桌面端
+- 点击格子选中
+- 使用键盘数字键 1-9 输入
+- 按 Delete 或 Backspace 删除
+- 使用 Esc 取消选中
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### 移动端
+- 点按格子弹出数字轮盘
+- 长按格子可拖拽选择数字
+- 点击轮盘上的数字或删除按钮
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### 快捷操作
+- **提示**: 获取下一步操作建议
+- **撤销**: Ctrl+Z 或点击撤销按钮
+- **恢复**: Ctrl+Y 或点击恢复按钮
+- **重新开始**: 重置当前游戏
+- **暂停**: 暂停计时器
 
-## Deploy on Vercel
+## 🎨 自定义主题
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+应用支持自定义主题色：
+- **主题色**: `#2dd4bf` (青色)
+- **暗色背景**: `#111111`
+- 自动适应系统偏好
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 📊 数据存储
+
+游戏数据存储在浏览器的 localStorage 中：
+- 游戏历史记录
+- 用户偏好设置
+- 操作历史记录
+
+*注意: 清除浏览器数据会丢失所有记录*
+
+## 🔗 相关链接
+
+- **应用主页**: [sudoku.ravelloh.top](https://sudoku.ravelloh.top)
+- **作者博客**: [ravelloh.top](https://ravelloh.top)
+- **GitHub仓库**: [github.com/RavelloH/Sudoku](https://github.com/RavelloH/Sudoku)
+
+## 📄 许可证
+
+本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情。
+
+---
+
+Made with ❤️ by [RavelloH](https://ravelloh.top)
