@@ -14,6 +14,7 @@ export interface SudokuGame {
   duration?: number;
   isCompleted: boolean;
   moves: Move[];
+  hintsUsed?: number;
 }
 
 export interface Move {

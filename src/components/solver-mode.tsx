@@ -158,8 +158,20 @@ export function SolverMode({ initialGrid }: SolverModeProps) {
   const solve = () => {
     const solution = SudokuUtils.solve(userGrid);
     if (solution) {
+      // 记录所有被完全解决填入的单元格
+      const newAutoSolved = new Set<string>(autoSolvedCells);
+      
+      for (let row = 0; row < 9; row++) {
+        for (let col = 0; col < 9; col++) {
+          // 如果原来是空的，现在有值了，标记为自动解决
+          if (userGrid[row][col] === null && solution[row][col] !== null) {
+            newAutoSolved.add(`${row}-${col}`);
+          }
+        }
+      }
+      
       setUserGrid(solution);
-      setAutoSolvedCells(new Set()); // 清除自动解决标记，因为现在全部都是解决的
+      setAutoSolvedCells(newAutoSolved);
       toast.success('🎉 数独已完全解决！');
     } else {
       toast.error('无法解决当前数独，请检查输入是否正确');
@@ -177,51 +189,100 @@ export function SolverMode({ initialGrid }: SolverModeProps) {
       animate={{ opacity: 1, y: 0 }}
       className="space-y-6"
     >
-      {/* 完成提示 */}
-      {isComplete && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="text-center"
-        >
-          <Card className="border-green-200 dark:border-green-800">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-center gap-2 text-green-600 dark:text-green-400">
-                <CheckCircle className="w-6 h-6" />
-                <span className="text-lg font-semibold">🎉 数独已完成！</span>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-      )}
+      {/* 完成提示 - 集成在进度卡片中 */}
 
       {/* 主要内容区域 - 左右布局 */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* 左侧 - 数独网格 */}
-        <div className="lg:col-span-2 flex justify-center">
-          <SudokuGridComponent
-            grid={userGrid}
-            initialGrid={SudokuUtils.createEmptyGrid()} // 没有初始固定数字
-            conflicts={conflicts}
-            autoSolvedCells={autoSolvedCells}
-            onCellChange={handleCellChange}
-            onCellSelect={(row, col) => setSelectedCell({ row, col })}
-            selectedCell={selectedCell}
-            className="w-full max-w-lg"
-          />
+        {/* 左侧 - 数独显示区域 */}
+        <div className="lg:col-span-2">
+          <Card className="h-fit card-enhanced">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg font-semibold">数独解题器</CardTitle>
+                <div className="flex items-center gap-2">
+                  <Badge variant={hasConflicts ? "destructive" : isComplete ? "default" : "secondary"}>
+                    {hasConflicts ? '存在冲突' : isComplete ? '已完成' : '求解中'}
+                  </Badge>
+                  <Badge variant="outline">
+                    {Math.round(progress)}% 完成
+                  </Badge>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {/* 数独网格区域 - 居中 */}
+                <div className="flex justify-center">
+                  <SudokuGridComponent
+                    grid={userGrid}
+                    initialGrid={SudokuUtils.createEmptyGrid()} // 没有初始固定数字
+                    conflicts={conflicts}
+                    autoSolvedCells={autoSolvedCells}
+                    onCellChange={handleCellChange}
+                    onCellSelect={(row, col) => setSelectedCell({ row, col })}
+                    selectedCell={selectedCell}
+                    className="w-full max-w-lg"
+                  />
+                </div>
+                
+                {/* 解题信息栏 */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-muted/30 p-4 rounded-lg">
+                  <div className="text-center">
+                    <div className="text-lg font-semibold">{solvingStats.totalCells}</div>
+                    <div className="text-sm text-muted-foreground">总填入</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-lg font-semibold text-primary">{solvingStats.userCells}</div>
+                    <div className="text-sm text-muted-foreground">用户填入</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-lg font-semibold text-muted-foreground">{solvingStats.autoSolvedCells}</div>
+                    <div className="text-sm text-muted-foreground">程序推导</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-lg font-semibold text-destructive">{solvingStats.conflictCells}</div>
+                    <div className="text-sm text-muted-foreground">冲突数字</div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* 右侧 - 控制面板 */}
         <div className="space-y-4">
           {/* 解题进度 */}
-          <Card>
+          <Card className={isComplete ? "border-green-200 dark:border-green-800 bg-green-50/50 dark:bg-green-950/20" : ""}>
             <CardHeader className="pb-3">
               <CardTitle className="text-lg flex items-center gap-2">
-                <Brain className="w-5 h-5" />
-                解题进度
+                {isComplete ? (
+                  <>
+                    <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
+                    <span className="text-green-600 dark:text-green-400">解题完成！</span>
+                  </>
+                ) : (
+                  <>
+                    <Brain className="w-5 h-5" />
+                    解题进度
+                  </>
+                )}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              {isComplete && (
+                <motion.div 
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex items-center gap-2 text-green-600 dark:text-green-400 bg-green-100/50 dark:bg-green-900/30 p-3 rounded-lg"
+                >
+                  <span className="text-2xl">🎉</span>
+                  <div>
+                    <div className="font-semibold">恭喜完成数独！</div>
+                    <div className="text-sm opacity-80">所有数字都已正确填入</div>
+                  </div>
+                </motion.div>
+              )}
+              
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>完成度</span>
@@ -229,22 +290,11 @@ export function SolverMode({ initialGrid }: SolverModeProps) {
                 </div>
                 <div className="w-full bg-muted rounded-full h-2">
                   <motion.div
-                    className="bg-primary rounded-full h-2"
+                    className={`rounded-full h-2 ${isComplete ? 'bg-green-500' : 'bg-primary'}`}
                     initial={{ width: 0 }}
                     animate={{ width: `${progress}%` }}
                     transition={{ duration: 0.5 }}
                   />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div className="text-center p-2 bg-muted/50 rounded-lg">
-                  <div className="font-semibold text-lg">{solvingStats.userCells}</div>
-                  <div className="text-muted-foreground">用户填入</div>
-                </div>
-                <div className="text-center p-2 bg-muted/50 rounded-lg">
-                  <div className="font-semibold text-lg text-muted-foreground">{solvingStats.autoSolvedCells}</div>
-                  <div className="text-muted-foreground">程序推导</div>
                 </div>
               </div>
 

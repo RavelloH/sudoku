@@ -48,22 +48,25 @@ import {
   Undo,
   Redo,
   RotateCw,
-  Zap
+  Zap,
+  Plus
 } from 'lucide-react';
 
 interface ChallengeProps {
   onSwitchToSolver?: (grid: SudokuGrid) => void;
+  gameToLoad?: SudokuGame | null;
 }
 
-export function ChallengeMode({ onSwitchToSolver }: ChallengeProps) {
+export function ChallengeMode({ onSwitchToSolver, gameToLoad }: ChallengeProps) {
   const [currentGame, setCurrentGame] = useState<SudokuGame | null>(null);
   const [selectedCell, setSelectedCell] = useState<{ row: number; col: number } | null>(null);
-  const [isPaused, setIsPaused] = useState(true); // 默认暂停，直到用户开始输入
+  const [isPaused, setIsPaused] = useState(false); // 默认不暂停，新游戏时直接可以开始
   const [showNewGameDialog, setShowNewGameDialog] = useState(false);
   const [showRestartDialog, setShowRestartDialog] = useState(false);
   const [showDifficultyDialog, setShowDifficultyDialog] = useState(false);
   const [currentMoveIndex, setCurrentMoveIndex] = useState(-1);
   const [selectedDifficulty, setSelectedDifficulty] = useState<Difficulty>('medium');
+  const [tempSelectedDifficulty, setTempSelectedDifficulty] = useState<Difficulty | null>(null);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [gameStarted, setGameStarted] = useState(false); // 是否已开始游戏（输入了第一个数字）
   const [highlightedCells, setHighlightedCells] = useState<Set<string>>(new Set());
@@ -87,6 +90,25 @@ export function ChallengeMode({ onSwitchToSolver }: ChallengeProps) {
         clearInterval(intervalRef.current);
       }
     };
+  }, [currentGame, gameStarted, isPaused, currentGame?.isCompleted]);
+
+  // 页面关闭前提示和自动暂停
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (currentGame && gameStarted && !isPaused && !currentGame.isCompleted) {
+        e.preventDefault();
+        e.returnValue = '是否需要暂停游戏？';
+        // 自动暂停游戏
+        setIsPaused(true);
+        return e.returnValue;
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
   }, [currentGame, gameStarted, isPaused]);
 
   // 恢复已保存的游戏
@@ -96,7 +118,11 @@ export function ChallengeMode({ onSwitchToSolver }: ChallengeProps) {
       setCurrentGame(savedGame);
       setCurrentMoveIndex(savedGame.moves.length - 1);
       setSelectedDifficulty(savedGame.difficulty);
+      
+      // 恢复时使用保存的duration，而不是实时计算
+      // 这样可以避免暂停后刷新页面时间还在变化的问题
       setElapsedTime(savedGame.duration || 0);
+      
       setGameStarted(savedGame.moves.length > 0);
       setIsPaused(true); // 恢复时默认暂停
     } else {
@@ -115,6 +141,15 @@ export function ChallengeMode({ onSwitchToSolver }: ChallengeProps) {
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, []);
+
+  // 难度选择对话框状态管理
+  useEffect(() => {
+    if (showDifficultyDialog) {
+      setTempSelectedDifficulty(null);
+    } else {
+      setTempSelectedDifficulty(null);
+    }
+  }, [showDifficultyDialog]);
 
   const generateGameId = (): string => {
     return `game_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -136,30 +171,33 @@ export function ChallengeMode({ onSwitchToSolver }: ChallengeProps) {
 
     setCurrentGame(game);
     setSelectedCell(null);
-    setIsPaused(true);
+    setIsPaused(false); // 新游戏时不要暂停，让用户可以直接开始
     setCurrentMoveIndex(-1);
     setElapsedTime(0);
     setGameStarted(false);
     setHighlightedCells(new Set());
     
-    // 不记录到历史记录，直到用户开始游戏
+    // 立即保存到历史记录，确保统计准确
+    StorageUtils.saveGame(game);
   }, []);
 
-  const makeMove = useCallback((row: number, col: number, value: number | null) => {
+  const makeMove = useCallback((row: number, col: number, value: number | null, isHint: boolean = false) => {
     if (!currentGame || currentGame.isCompleted) return;
 
     const previousValue = currentGame.currentGrid[row][col];
     if (previousValue === value) return;
 
-    // 如果这是第一次输入，开始计时并保存游戏
+    // 如果这是第一次输入，开始计时
     if (!gameStarted) {
       setGameStarted(true);
       setIsPaused(false);
-      // 现在才保存到历史记录
-      StorageUtils.saveGame({
+      // 更新开始时间并重新保存
+      const updatedGame = {
         ...currentGame,
-        startTime: new Date() // 重置开始时间
-      });
+        startTime: new Date()
+      };
+      StorageUtils.saveGame(updatedGame);
+      setCurrentGame(updatedGame);
     }
 
     const move: Move = {
@@ -179,7 +217,8 @@ export function ChallengeMode({ onSwitchToSolver }: ChallengeProps) {
       ...currentGame,
       currentGrid: newGrid,
       moves: newMoves,
-      duration: elapsedTime
+      duration: elapsedTime,
+      hintsUsed: isHint ? (currentGame.hintsUsed || 0) + 1 : (currentGame.hintsUsed || 0)
     };
 
     // 检查是否完成
@@ -187,6 +226,9 @@ export function ChallengeMode({ onSwitchToSolver }: ChallengeProps) {
       updatedGame.isCompleted = true;
       updatedGame.endTime = new Date();
       updatedGame.duration = elapsedTime;
+      
+      // 更新统计
+      StorageUtils.updateStats(updatedGame);
       
       // 庆祝动画
       confetti({
@@ -257,7 +299,7 @@ export function ChallengeMode({ onSwitchToSolver }: ChallengeProps) {
     const hint = SudokuUtils.getHint(currentGame.currentGrid);
     if (hint) {
       // 填入提示数字
-      makeMove(hint.row, hint.col, hint.value);
+      makeMove(hint.row, hint.col, hint.value, true);
       
       // 高亮显示相关数字
       const cellsToHighlight = new Set<string>();
@@ -319,7 +361,7 @@ export function ChallengeMode({ onSwitchToSolver }: ChallengeProps) {
     setCurrentMoveIndex(-1);
     setElapsedTime(0);
     setGameStarted(false);
-    setIsPaused(true);
+    setIsPaused(false); // 重新开始游戏时不要暂停
     setHighlightedCells(new Set());
     setSelectedCell(null);
     
@@ -413,33 +455,49 @@ export function ChallengeMode({ onSwitchToSolver }: ChallengeProps) {
         )}
       </AnimatePresence>
 
-      {/* 主要游戏区域 - 左右布局 */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* 左侧 - 数独网格 */}
-        <div className="lg:col-span-2 flex justify-center">
-          <SudokuGridComponent
-            grid={currentGame.currentGrid}
-            initialGrid={currentGame.initialGrid}
-            conflicts={conflicts}
-            onCellChange={makeMove}
-            onCellSelect={(row, col) => setSelectedCell({ row, col })}
-            selectedCell={selectedCell}
-            highlightedCells={highlightedCells}
-            className="w-full max-w-lg"
-          />
-        </div>
+      {/* 主要游戏区域 - 上下布局 */}
+      <div className="space-y-6">
+        {/* 数独网格区域 - 带Card容器 */}
+        <Card className="h-fit card-enhanced">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg font-semibold">数独游戏</CardTitle>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline">
+                  {SudokuUtils.getDifficultyName(currentGame.difficulty)}
+                </Badge>
+                {currentGame.isCompleted && (
+                  <Badge variant="default" className="bg-green-600 hover:bg-green-700">
+                    已完成
+                  </Badge>
+                )}
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="flex justify-center">
+              <SudokuGridComponent
+                grid={currentGame.currentGrid}
+                initialGrid={currentGame.initialGrid}
+                conflicts={conflicts}
+                onCellChange={makeMove}
+                onCellSelect={(row, col) => setSelectedCell({ row, col })}
+                selectedCell={selectedCell}
+                highlightedCells={highlightedCells}
+                onContinue={() => setIsPaused(false)}
+                isPaused={isPaused}
+                className="w-full max-w-lg"
+              />
+            </div>
+          </CardContent>
+        </Card>
 
-        {/* 右侧 - 控制面板 */}
-        <div className="space-y-4">
+        {/* 控制面板区域 */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {/* 游戏状态 */}
           <Card>
             <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg">游戏状态</CardTitle>
-                <Badge variant="outline" className="text-sm">
-                  {SudokuUtils.getDifficultyName(currentGame.difficulty)}
-                </Badge>
-              </div>
+              <CardTitle className="text-lg">游戏状态</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex items-center gap-2 text-lg">
@@ -448,14 +506,28 @@ export function ChallengeMode({ onSwitchToSolver }: ChallengeProps) {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => setIsPaused(!isPaused)}
+                  onClick={() => {
+                    const newPausedState = !isPaused;
+                    setIsPaused(newPausedState);
+                    
+                    // 如果正在暂停，保存当前时间
+                    if (newPausedState && currentGame) {
+                      const updatedGame = {
+                        ...currentGame,
+                        duration: elapsedTime
+                      };
+                      StorageUtils.saveGame(updatedGame);
+                      setCurrentGame(updatedGame);
+                    }
+                  }}
                   disabled={!gameStarted || currentGame.isCompleted}
                 >
                   {isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
                 </Button>
               </div>
-              <div className="text-sm text-muted-foreground">
-                步数：{currentGame.moves.length}
+              <div className="flex items-center justify-between text-sm text-muted-foreground">
+                <span>步数：{currentGame.moves.length}</span>
+                <span>提示：{currentGame.hintsUsed ?? 0}</span>
               </div>
               {!gameStarted && (
                 <div className="text-sm text-muted-foreground">
@@ -524,6 +596,15 @@ export function ChallengeMode({ onSwitchToSolver }: ChallengeProps) {
                 className="w-full"
                 onClick={() => setShowDifficultyDialog(true)}
               >
+                <Plus className="w-4 h-4 mr-2" />
+                开始新游戏
+              </Button>
+              
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => setShowDifficultyDialog(true)}
+              >
                 <Settings className="w-4 h-4 mr-2" />
                 选择难度
               </Button>
@@ -554,9 +635,10 @@ export function ChallengeMode({ onSwitchToSolver }: ChallengeProps) {
             {difficulties.map((diff) => (
               <Button
                 key={diff.value}
-                variant={selectedDifficulty === diff.value ? "default" : "outline"}
+                variant={tempSelectedDifficulty === diff.value ? "default" : "outline"}
                 className="justify-start h-auto p-4 text-left"
                 onClick={() => {
+                  setTempSelectedDifficulty(diff.value);
                   setSelectedDifficulty(diff.value);
                   startNewGame(diff.value);
                   setShowDifficultyDialog(false);

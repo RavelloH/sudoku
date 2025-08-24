@@ -16,7 +16,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { SudokuGridComponent } from '@/components/sudoku-grid';
 import { StorageUtils } from '@/lib/storage';
@@ -35,11 +34,13 @@ import {
   Calendar,
   CheckCircle
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-export function HistoryMode() {
+export function HistoryMode({ onSwitchToChallenge }: { onSwitchToChallenge?: (game?: SudokuGame) => void }) {
   const [games, setGames] = useState<SudokuGame[]>([]);
   const [stats, setStats] = useState<GameStats>(StorageUtils.getStats());
   const [selectedGame, setSelectedGame] = useState<SudokuGame | null>(null);
+  const [selectedGameForDisplay, setSelectedGameForDisplay] = useState<SudokuGame | null>(null);
   const [gameToDelete, setGameToDelete] = useState<string | null>(null);
   const [showReplayDialog, setShowReplayDialog] = useState(false);
   const [replayIndex, setReplayIndex] = useState(0);
@@ -53,10 +54,20 @@ export function HistoryMode() {
     const allGames = StorageUtils.getAllGames();
     setGames(allGames.sort((a, b) => b.startTime.getTime() - a.startTime.getTime()));
     setStats(StorageUtils.getStats());
+    
+    // 如果有游戏但没有选中的游戏，自动选中第一个
+    if (allGames.length > 0 && !selectedGameForDisplay) {
+      setSelectedGameForDisplay(allGames[0]);
+      setReplayIndex(allGames[0].moves.length);
+    }
   };
 
   const deleteGame = (gameId: string) => {
     StorageUtils.deleteGame(gameId);
+    // 如果删除的是当前选中的游戏，重置选中状态
+    if (selectedGameForDisplay?.id === gameId) {
+      setSelectedGameForDisplay(null);
+    }
     loadGames();
     setGameToDelete(null);
     toast.success('游戏记录已删除');
@@ -74,32 +85,32 @@ export function HistoryMode() {
   };
 
   const playReplay = () => {
-    if (!selectedGame) return;
+    if (!selectedGameForDisplay) return;
     
     setIsReplaying(true);
     setReplayIndex(0);
     
     const playMove = (index: number) => {
-      if (index >= selectedGame.moves.length) {
+      if (index >= selectedGameForDisplay.moves.length) {
         setIsReplaying(false);
         toast.success('回放完成！');
         return;
       }
       
       setReplayIndex(index + 1);
-      setTimeout(() => playMove(index + 1), 1000); // 每秒播放一步
+      setTimeout(() => playMove(index + 1), 200); // 加快速度到400毫秒
     };
     
     playMove(0);
   };
 
   const getReplayGrid = (): any => {
-    if (!selectedGame) return SudokuUtils.createEmptyGrid();
+    if (!selectedGameForDisplay) return SudokuUtils.createEmptyGrid();
     
-    const grid = SudokuUtils.copyGrid(selectedGame.initialGrid);
+    const grid = SudokuUtils.copyGrid(selectedGameForDisplay.initialGrid);
     
-    for (let i = 0; i < replayIndex && i < selectedGame.moves.length; i++) {
-      const move = selectedGame.moves[i];
+    for (let i = 0; i < replayIndex && i < selectedGameForDisplay.moves.length; i++) {
+      const move = selectedGameForDisplay.moves[i];
       grid[move.row][move.col] = move.value;
     }
     
@@ -107,58 +118,32 @@ export function HistoryMode() {
   };
 
   const continueGame = (game: SudokuGame) => {
-    // 这里应该切换到挑战模式并加载游戏
-    toast.info('功能开发中：将切换到挑战模式继续游戏');
-  };
-
-  const restartGame = (game: SudokuGame) => {
-    // 这里应该切换到挑战模式并重新开始游戏
-    toast.info('功能开发中：将切换到挑战模式重新开始游戏');
-  };
-
-  const exportData = () => {
-    try {
-      const data = StorageUtils.exportData();
-      const blob = new Blob([data], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `sudoku_data_${format(new Date(), 'yyyy-MM-dd')}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      toast.success('数据已导出');
-    } catch (error) {
-      toast.error('导出失败');
+    if (onSwitchToChallenge) {
+      onSwitchToChallenge(game);
+      toast.success('继续游戏');
+    } else {
+      toast.error('无法继续游戏');
     }
   };
 
-  const importData = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.json';
-    input.onchange = (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (!file) return;
-      
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const data = e.target?.result as string;
-          if (StorageUtils.importData(data)) {
-            loadGames();
-            toast.success('数据导入成功');
-          } else {
-            toast.error('数据格式错误');
-          }
-        } catch (error) {
-          toast.error('导入失败');
-        }
+  const restartGame = (game: SudokuGame) => {
+    if (onSwitchToChallenge) {
+      // 创建一个重新开始的游戏状态
+      const restartedGame: SudokuGame = {
+        ...game,
+        id: `restart_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        currentGrid: SudokuUtils.copyGrid(game.initialGrid),
+        startTime: new Date(),
+        endTime: undefined,
+        duration: 0,
+        isCompleted: false,
+        moves: []
       };
-      reader.readAsText(file);
-    };
-    input.click();
+      onSwitchToChallenge(restartedGame);
+      toast.success('重新开始游戏');
+    } else {
+      toast.error('无法重新开始游戏');
+    }
   };
 
   const formatDuration = (seconds: number): string => {
@@ -171,220 +156,363 @@ export function HistoryMode() {
     return stats.totalGames > 0 ? Math.round((stats.completedGames / stats.totalGames) * 100) : 0;
   };
 
+  const getDifficultyStats = (difficulty: Difficulty) => {
+    const allGames = StorageUtils.getAllGames();
+    const gamesOfDifficulty = allGames.filter(game => game.difficulty === difficulty);
+    const completedGamesOfDifficulty = gamesOfDifficulty.filter(game => game.isCompleted);
+    
+    const started = gamesOfDifficulty.length;
+    const completed = completedGamesOfDifficulty.length;
+    const averageTime = completedGamesOfDifficulty.length > 0 
+      ? Math.round(completedGamesOfDifficulty.reduce((sum, game) => sum + (game.duration || 0), 0) / completedGamesOfDifficulty.length)
+      : 0;
+    
+    return { started, completed, averageTime };
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       className="space-y-6"
     >
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <History className="w-5 h-5" />
-              游戏历史
-            </CardTitle>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={exportData}>
-                <Download className="w-4 h-4 mr-1" />
-                导出
-              </Button>
-              <Button variant="outline" size="sm" onClick={importData}>
-                <Upload className="w-4 h-4 mr-1" />
-                导入
-              </Button>
+      {/* 顶部统计数据栏 */}
+      <Card className="card-enhanced">
+        <CardContent className="pt-6">
+          <div className="grid grid-cols-3 gap-4">
+            <div className="text-center">
+              <div className="flex items-center justify-center mb-2">
+                <BarChart3 className="w-5 h-5 text-primary mr-2" />
+                <span className="text-2xl font-bold">{stats.totalGames}</span>
+              </div>
+              <p className="text-sm text-muted-foreground">总游戏数</p>
+            </div>
+            
+            <div className="text-center">
+              <div className="flex items-center justify-center mb-2">
+                <Trophy className="w-5 h-5 text-yellow-500 mr-2" />
+                <span className="text-2xl font-bold">{stats.completedGames}</span>
+              </div>
+              <p className="text-sm text-muted-foreground">已完成</p>
+            </div>
+            
+            <div className="text-center">
+              <div className="flex items-center justify-center mb-2">
+                <CheckCircle className="w-5 h-5 text-green-500 mr-2" />
+                <span className="text-2xl font-bold">{getCompletionRate()}%</span>
+              </div>
+              <p className="text-sm text-muted-foreground">完成率</p>
             </div>
           </div>
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="games" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="games">游戏记录</TabsTrigger>
-              <TabsTrigger value="stats">统计数据</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="games" className="space-y-4">
+        </CardContent>
+      </Card>
+
+      {/* 主要内容区域 */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* 左侧 - 棋盘展示区域 */}
+        <div className="lg:col-span-2">
+          <Card className="card-enhanced">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg font-semibold">对局回放</CardTitle>
+                {selectedGameForDisplay && (
+                  <div className="flex items-center gap-2">
+                    <Badge 
+                      variant={selectedGameForDisplay.isCompleted ? "default" : "secondary"}
+                      className="flex items-center gap-1"
+                    >
+                      {selectedGameForDisplay.isCompleted ? (
+                        <CheckCircle className="w-3 h-3" />
+                      ) : (
+                        <Clock className="w-3 h-3" />
+                      )}
+                      {selectedGameForDisplay.isCompleted ? '已完成' : '进行中'}
+                    </Badge>
+                    <Badge 
+                      variant="outline"
+                      className={SudokuUtils.getDifficultyColor(selectedGameForDisplay.difficulty)}
+                    >
+                      {SudokuUtils.getDifficultyName(selectedGameForDisplay.difficulty)}
+                    </Badge>
+                  </div>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent>
+              {selectedGameForDisplay ? (
+                <div className="space-y-4">
+                  {/* 棋盘显示 */}
+                  <div className="flex justify-center">
+                    <SudokuGridComponent
+                      grid={getReplayGrid()}
+                      initialGrid={selectedGameForDisplay.initialGrid}
+                      conflicts={[]}
+                      onCellChange={() => {}}
+                      readOnly={true}
+                      className="w-full max-w-lg"
+                    />
+                  </div>
+                  
+                  {/* 回放控制 */}
+                  {selectedGameForDisplay.moves.length > 0 && (
+                    <div className="space-y-3">
+                      <div className="text-center text-sm text-muted-foreground">
+                        第 {replayIndex} / {selectedGameForDisplay.moves.length} 步
+                      </div>
+                      <div className="flex justify-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setReplayIndex(0)}
+                          disabled={replayIndex === 0 || isReplaying}
+                        >
+                          开始
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setReplayIndex(Math.max(0, replayIndex - 1))}
+                          disabled={replayIndex === 0 || isReplaying}
+                        >
+                          上一步
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={playReplay}
+                          disabled={isReplaying || selectedGameForDisplay.moves.length === 0}
+                        >
+                          {isReplaying ? '播放中...' : '自动播放'}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setReplayIndex(Math.min(selectedGameForDisplay.moves.length, replayIndex + 1))}
+                          disabled={replayIndex === selectedGameForDisplay.moves.length || isReplaying}
+                        >
+                          下一步
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setReplayIndex(selectedGameForDisplay.moves.length)}
+                          disabled={replayIndex === selectedGameForDisplay.moves.length || isReplaying}
+                        >
+                          结束
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* 游戏详细信息 */}
+                  {selectedGameForDisplay && (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm bg-muted/30 p-4 rounded-lg">
+                      <div>
+                        <span className="text-muted-foreground">开始时间</span>
+                        <p className="font-medium">
+                          {format(selectedGameForDisplay.startTime, 'MM-dd HH:mm')}
+                        </p>
+                      </div>
+                      
+                      {selectedGameForDisplay.duration && (
+                        <div>
+                          <span className="text-muted-foreground">用时</span>
+                          <p className="font-medium">{formatDuration(selectedGameForDisplay.duration)}</p>
+                        </div>
+                      )}
+                      
+                      <div>
+                        <span className="text-muted-foreground">步数</span>
+                        <p className="font-medium">{selectedGameForDisplay.moves.length}</p>
+                      </div>
+                      
+                      <div>
+                        <span className="text-muted-foreground">进度</span>
+                        <p className="font-medium">
+                          {Math.round((selectedGameForDisplay.moves.length / 81) * 100)}%
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-12 text-muted-foreground">
+                  <History className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                  <p className="text-lg">请选择一个游戏查看详情</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* 右侧 - 游戏列表 */}
+        <div className="space-y-4">
+          {/* 最佳时间 */}
+          <Card className="card-enhanced">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                <Trophy className="w-5 h-5 text-yellow-500" />
+                最佳时间
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-1">
+                {(['easy', 'medium', 'hard', 'expert', 'master', 'extreme'] as Difficulty[]).map((difficulty) => {
+                  const difficultyStats = getDifficultyStats(difficulty);
+                  const difficultyColors = {
+                    easy: 'text-green-600 dark:text-green-400',
+                    medium: 'text-blue-600 dark:text-blue-400',
+                    hard: 'text-orange-600 dark:text-orange-400',
+                    expert: 'text-red-600 dark:text-red-400',
+                    master: 'text-purple-600 dark:text-purple-400',
+                    extreme: 'text-gray-600 dark:text-gray-400'
+                  };
+                  const difficultyNames = {
+                    easy: '简单',
+                    medium: '中等',
+                    hard: '困难',
+                    expert: '专家',
+                    master: '大师',
+                    extreme: '极限'
+                  };
+                  
+                  return (
+                    <div key={difficulty} className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50 transition-colors">
+                      <span className={`text-sm font-medium ${difficultyColors[difficulty]}`}>
+                        {difficultyNames[difficulty]}
+                      </span>
+                      <div className="flex items-center gap-4 text-sm">
+                        <span className="font-semibold">
+                          {stats.bestTimes[difficulty] ? formatDuration(stats.bestTimes[difficulty]) : '--'}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {difficultyStats.completed}/{difficultyStats.started}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {difficultyStats.averageTime > 0 ? formatDuration(difficultyStats.averageTime) : '--'}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* 游戏记录 */}
+          <Card className="card-enhanced">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg font-semibold">游戏记录</CardTitle>
+            </CardHeader>
+            <CardContent className="max-h-[600px] overflow-y-auto">
               {games.length === 0 ? (
-                <div className="text-center py-12">
+                <div className="text-center py-8">
                   <History className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
                   <p className="text-lg font-medium">还没有游戏记录</p>
                   <p className="text-sm text-muted-foreground">开始你的第一局数独吧！</p>
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {games.map((game) => (
                     <motion.div
                       key={game.id}
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
-                      className="border rounded-lg p-4 space-y-3"
+                      className={cn(
+                        "border rounded-lg p-3 cursor-pointer transition-all duration-200 hover:bg-muted/50",
+                        selectedGameForDisplay?.id === game.id && "bg-primary/5"
+                      )}
+                      onClick={() => {
+                        setSelectedGameForDisplay(game);
+                        setReplayIndex(game.moves.length);
+                      }}
                     >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <Badge 
-                            variant={game.isCompleted ? "default" : "secondary"}
-                            className="flex items-center gap-1"
-                          >
-                            {game.isCompleted ? (
-                              <CheckCircle className="w-3 h-3" />
-                            ) : (
-                              <Clock className="w-3 h-3" />
-                            )}
-                            {game.isCompleted ? '已完成' : '进行中'}
-                          </Badge>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Badge 
+                              variant={game.isCompleted ? "default" : "secondary"}
+                              className="text-xs"
+                            >
+                              {game.isCompleted ? '完成' : '进行中'}
+                            </Badge>
+                            <Badge 
+                              variant="outline"
+                              className="text-xs"
+                            >
+                              {SudokuUtils.getDifficultyName(game.difficulty)}
+                            </Badge>
+                          </div>
                           
-                          <Badge 
-                            variant="outline"
-                            className={SudokuUtils.getDifficultyColor(game.difficulty)}
-                          >
-                            {SudokuUtils.getDifficultyName(game.difficulty)}
-                          </Badge>
-                        </div>
-                        
-                        <div className="flex items-center gap-2">
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => startReplay(game)}
-                            disabled={game.moves.length === 0}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setGameToDelete(game.id);
+                            }}
                           >
-                            <RotateCcw className="w-4 h-4" />
+                            <Trash2 className="w-3 h-3" />
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setGameToDelete(game.id)}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </div>
-                      
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                        <div>
-                          <span className="text-muted-foreground">开始时间</span>
-                          <p className="font-medium">
-                            {format(game.startTime, 'MM-dd HH:mm')}
-                          </p>
                         </div>
                         
-                        {game.duration && (
+                        <div className="grid grid-cols-2 gap-2 text-xs">
                           <div>
-                            <span className="text-muted-foreground">用时</span>
-                            <p className="font-medium">{formatDuration(game.duration)}</p>
+                            <span className="text-muted-foreground">开始时间</span>
+                            <p className="font-medium">
+                              {format(game.startTime, 'MM-dd HH:mm')}
+                            </p>
+                          </div>
+                          
+                          {game.duration ? (
+                            <div>
+                              <span className="text-muted-foreground">用时</span>
+                              <p className="font-medium">{formatDuration(game.duration)}</p>
+                            </div>
+                          ) : (
+                            <div>
+                              <span className="text-muted-foreground">步数</span>
+                              <p className="font-medium">{game.moves.length}</p>
+                            </div>
+                          )}
+                        </div>
+                        
+                        {!game.isCompleted && (
+                          <div className="flex gap-1">
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              className="flex-1 text-xs h-7"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                continueGame(game);
+                              }}
+                            >
+                              <Play className="w-3 h-3 mr-1" />
+                              继续
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              className="flex-1 text-xs h-7"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                restartGame(game);
+                              }}
+                            >
+                              重开
+                            </Button>
                           </div>
                         )}
-                        
-                        <div>
-                          <span className="text-muted-foreground">步数</span>
-                          <p className="font-medium">{game.moves.length}</p>
-                        </div>
-                        
-                        <div>
-                          <span className="text-muted-foreground">进度</span>
-                          <p className="font-medium">
-                            {Math.round((game.moves.length / 81) * 100)}%
-                          </p>
-                        </div>
-                      </div>
-                      
-                      <div className="flex gap-2">
-                        {!game.isCompleted && (
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => continueGame(game)}
-                          >
-                            <Play className="w-4 h-4 mr-1" />
-                            继续
-                          </Button>
-                        )}
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => restartGame(game)}
-                        >
-                          重新开始
-                        </Button>
                       </div>
                     </motion.div>
                   ))}
                 </div>
               )}
-            </TabsContent>
-            
-            <TabsContent value="stats" className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="text-center">
-                      <BarChart3 className="w-8 h-8 mx-auto mb-2 text-primary" />
-                      <p className="text-2xl font-bold">{stats.totalGames}</p>
-                      <p className="text-sm text-muted-foreground">总游戏数</p>
-                    </div>
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="text-center">
-                      <Trophy className="w-8 h-8 mx-auto mb-2 text-yellow-500" />
-                      <p className="text-2xl font-bold">{stats.completedGames}</p>
-                      <p className="text-sm text-muted-foreground">已完成</p>
-                    </div>
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="text-center">
-                      <CheckCircle className="w-8 h-8 mx-auto mb-2 text-green-500" />
-                      <p className="text-2xl font-bold">{getCompletionRate()}%</p>
-                      <p className="text-sm text-muted-foreground">完成率</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-              
-              {/* 各难度最佳成绩 */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">最佳成绩</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {(['easy', 'medium', 'hard', 'expert', 'master', 'extreme'] as Difficulty[]).map((difficulty) => (
-                      <div key={difficulty} className="flex items-center justify-between py-2">
-                        <div className="flex items-center gap-2">
-                          <Badge 
-                            variant="outline"
-                            className={SudokuUtils.getDifficultyColor(difficulty)}
-                          >
-                            {SudokuUtils.getDifficultyName(difficulty)}
-                          </Badge>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-medium">
-                            {stats.bestTimes[difficulty] 
-                              ? formatDuration(stats.bestTimes[difficulty]!)
-                              : '暂无记录'
-                            }
-                          </p>
-                          {stats.averageTimes[difficulty] && (
-                            <p className="text-xs text-muted-foreground">
-                              平均: {formatDuration(stats.averageTimes[difficulty]!)}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
 
       {/* 回放对话框 */}
       <AlertDialog open={showReplayDialog} onOpenChange={setShowReplayDialog}>
@@ -404,14 +532,21 @@ export function HistoryMode() {
           
           <div className="flex justify-center py-4">
             {selectedGame && (
-              <div className="transform scale-75">
+              <div className="flex justify-center">
                 <SudokuGridComponent
-                  grid={getReplayGrid()}
+                  className="w-full max-w-lg pointer-events-none"
+                  grid={selectedGame ? (() => {
+                    const grid = SudokuUtils.copyGrid(selectedGame.initialGrid);
+                    for (let i = 0; i < replayIndex && i < selectedGame.moves.length; i++) {
+                      const move = selectedGame.moves[i];
+                      grid[move.row][move.col] = move.value;
+                    }
+                    return grid;
+                  })() : SudokuUtils.createEmptyGrid()}
                   initialGrid={selectedGame.initialGrid}
                   conflicts={[]}
                   onCellChange={() => {}}
                   readOnly={true}
-                  className="pointer-events-none"
                 />
               </div>
             )}
@@ -429,7 +564,27 @@ export function HistoryMode() {
             <Button
               variant="outline"
               size="sm"
-              onClick={playReplay}
+              onClick={() => {
+                if (!selectedGame) return;
+                
+                setIsReplaying(true);
+                let currentIndex = 0;
+                
+                const playMove = () => {
+                  if (currentIndex >= selectedGame.moves.length) {
+                    setIsReplaying(false);
+                    toast.success('回放完成！');
+                    return;
+                  }
+                  
+                  setReplayIndex(currentIndex + 1);
+                  currentIndex++;
+                  setTimeout(playMove, 200); // 加快速度到400毫秒
+                };
+                
+                setReplayIndex(0);
+                setTimeout(playMove, 200); // 初始延迟也加快到400毫秒
+              }}
               disabled={isReplaying || !selectedGame}
             >
               {isReplaying ? '播放中...' : '自动播放'}

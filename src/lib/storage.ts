@@ -121,9 +121,16 @@ export class StorageUtils {
   static getStats(): GameStats {
     try {
       const stored = localStorage.getItem(STORAGE_KEYS.STATS);
-      if (!stored) return this.getDefaultStats();
+      const baseStats = stored ? JSON.parse(stored) : this.getDefaultStats();
       
-      return JSON.parse(stored);
+      // 从实际的游戏记录中重新计算总游戏数
+      const allGames = this.getAllGames();
+      const stats = {
+        ...baseStats,
+        totalGames: allGames.length
+      };
+      
+      return stats;
     } catch (error) {
       console.error('Failed to load stats:', error);
       return this.getDefaultStats();
@@ -137,7 +144,7 @@ export class StorageUtils {
       
       if (!duration) return;
       
-      stats.totalGames++;
+      // 只增加已完成游戏数，总游戏数从所有游戏记录中计算
       stats.completedGames++;
       
       // Update best time

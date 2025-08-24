@@ -96,7 +96,7 @@ export function Header({ currentTab, onTabChange }: HeaderProps) {
   );
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-40 w-full border-b bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/60 card-enhanced border-b-border/50">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         {/* Logo and Title */}
         <div className="flex items-center gap-4">
@@ -107,7 +107,7 @@ export function Header({ currentTab, onTabChange }: HeaderProps) {
           >
             <SudokuIcon />
             <div className="hidden sm:block">
-              <h1 className="text-lg font-bold">RavelloH's Sudoku</h1>
+              <h1 className="text-lg font-bold text-gradient">RavelloH&apos;s Sudoku</h1>
               <p className="text-xs text-muted-foreground">精美的数独游戏</p>
             </div>
           </motion.div>
@@ -116,12 +116,12 @@ export function Header({ currentTab, onTabChange }: HeaderProps) {
         {/* Desktop Navigation */}
         <div className="hidden md:block">
           <Tabs value={currentTab} onValueChange={onTabChange}>
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-4 bg-muted/30 border border-border/50">
               {tabs.map((tab) => (
                 <TabsTrigger 
                   key={tab.value} 
                   value={tab.value}
-                  className="text-sm"
+                  className="text-sm font-medium data-[state=active]:bg-background data-[state=active]:shadow-sm"
                 >
                   {tab.label}
                 </TabsTrigger>
@@ -134,7 +134,7 @@ export function Header({ currentTab, onTabChange }: HeaderProps) {
         <div className="hidden md:flex items-center gap-2">
           <ExternalLinks />
           <ThemeToggle />
-          <Button variant="ghost" size="sm" className="w-9 h-9 p-0">
+          <Button variant="ghost" size="sm" className="w-9 h-9 p-0 hover:bg-muted/50 transition-colors">
             <User className="h-4 w-4" />
             <span className="sr-only">登录</span>
           </Button>
@@ -203,7 +203,7 @@ export function Header({ currentTab, onTabChange }: HeaderProps) {
 
                 {/* App Info */}
                 <div className="pt-4 border-t text-sm text-muted-foreground">
-                  <p>RavelloH's Sudoku</p>
+                  <p>RavelloH&apos;s Sudoku</p>
                   <p>sudoku.ravelloh.top</p>
                 </div>
               </div>

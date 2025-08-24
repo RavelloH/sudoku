@@ -45,25 +45,25 @@
 }
 
 :root {
-  --radius: 0.625rem;
+  --radius: 0.75rem;
   --background: 255 255 255;
-  --foreground: 23 23 23;
+  --foreground: 9 9 11;
   --card: 255 255 255;
-  --card-foreground: 23 23 23;
+  --card-foreground: 9 9 11;
   --popover: 255 255 255;
-  --popover-foreground: 23 23 23;
+  --popover-foreground: 9 9 11;
   --primary: 45 212 191; /* #2dd4bf */
   --primary-foreground: 255 255 255;
-  --secondary: 245 245 245;
-  --secondary-foreground: 23 23 23;
-  --muted: 245 245 245;
-  --muted-foreground: 113 113 122;
-  --accent: 245 245 245;
-  --accent-foreground: 23 23 23;
+  --secondary: 248 250 252;
+  --secondary-foreground: 15 23 42;
+  --muted: 248 250 252;
+  --muted-foreground: 100 116 139;
+  --accent: 248 250 252;
+  --accent-foreground: 15 23 42;
   --destructive: 239 68 68;
   --destructive-foreground: 255 255 255;
-  --border: 229 229 229;
-  --input: 229 229 229;
+  --border: 226 232 240;
+  --input: 226 232 240;
   --ring: 45 212 191;
   --chart-1: 45 212 191;
   --chart-2: 59 130 246;
@@ -71,29 +71,29 @@
   --chart-4: 251 191 36;
   --chart-5: 239 68 68;
   --sidebar: 250 250 250;
-  --sidebar-foreground: 23 23 23;
+  --sidebar-foreground: 9 9 11;
   --sidebar-primary: 45 212 191;
   --sidebar-primary-foreground: 255 255 255;
-  --sidebar-accent: 245 245 245;
-  --sidebar-accent-foreground: 23 23 23;
-  --sidebar-border: 229 229 229;
+  --sidebar-accent: 248 250 252;
+  --sidebar-accent-foreground: 15 23 42;
+  --sidebar-border: 226 232 240;
   --sidebar-ring: 45 212 191;
 }
 
 .dark {
-  --background: 17 17 17; /* #111111 */
+  --background: 0 0 0;
   --foreground: 250 250 250;
-  --card: 23 23 23;
+  --card: 9 9 11;
   --card-foreground: 250 250 250;
-  --popover: 23 23 23;
+  --popover: 9 9 11;
   --popover-foreground: 250 250 250;
   --primary: 45 212 191; /* #2dd4bf */
-  --primary-foreground: 17 17 17;
-  --secondary: 39 39 42;
+  --primary-foreground: 0 0 0;
+  --secondary: 24 24 27;
   --secondary-foreground: 250 250 250;
-  --muted: 39 39 42;
+  --muted: 24 24 27;
   --muted-foreground: 161 161 170;
-  --accent: 39 39 42;
+  --accent: 24 24 27;
   --accent-foreground: 250 250 250;
   --destructive: 239 68 68;
   --destructive-foreground: 250 250 250;
@@ -105,11 +105,11 @@
   --chart-3: 74 222 128;
   --chart-4: 251 191 36;
   --chart-5: 248 113 113;
-  --sidebar: 23 23 23;
+  --sidebar: 9 9 11;
   --sidebar-foreground: 250 250 250;
   --sidebar-primary: 45 212 191;
-  --sidebar-primary-foreground: 17 17 17;
-  --sidebar-accent: 39 39 42;
+  --sidebar-primary-foreground: 0 0 0;
+  --sidebar-accent: 24 24 27;
   --sidebar-accent-foreground: 250 250 250;
   --sidebar-border: 39 39 42;
   --sidebar-ring: 45 212 191;
@@ -119,7 +119,46 @@
   * {
     @apply border-border outline-ring/50;
   }
+  
   body {
     @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  
+  /* Vercel-style improvements */
+  .card {
+    @apply bg-card text-card-foreground;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  }
+  
+  .card-enhanced {
+    @apply bg-card text-card-foreground border;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  }
+    
+  .btn-vercel {
+    @apply inline-flex items-center justify-center rounded-lg text-sm font-medium transition-all duration-200;
+    @apply bg-primary text-primary-foreground hover:bg-primary/90;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  }
+  
+  .btn-vercel:hover {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    transform: translateY(-1px);
+  }
+  
+  .text-gradient {
+    background: linear-gradient(135deg, #000 0%, #666 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  .dark .text-gradient {
+    background: linear-gradient(135deg, #fff 0%, #999 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
   }
 }

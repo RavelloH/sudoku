@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { SudokuGrid, SudokuCell, Conflict } from '@/types/sudoku';
 import { Button } from '@/components/ui/button';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Play } from 'lucide-react';
 
 interface SudokuGridComponentProps {
   grid: SudokuGrid;
@@ -18,6 +18,8 @@ interface SudokuGridComponentProps {
   readOnly?: boolean;
   highlightedCells?: Set<string>;
   className?: string;
+  isPaused?: boolean;
+  onContinue?: () => void;
 }
 
 interface NumberWheelProps {
@@ -113,7 +115,7 @@ function NumberWheel({ onSelect, onClose, position, currentValue }: NumberWheelP
       onMouseUp={handleMouseUp}
     >
       {/* Background circle */}
-      <div className="absolute inset-0 bg-background/95 backdrop-blur-sm border-2 border-primary/20 rounded-full shadow-2xl" />
+      <div className="absolute inset-0 bg-background/95 backdrop-blur-sm border border-primary/20 rounded-full shadow-lg" />
       
       {/* Center delete button */}
       <Button
@@ -163,7 +165,9 @@ export function SudokuGridComponent({
   selectedCell,
   readOnly = false,
   highlightedCells = new Set(),
-  className
+  className,
+  isPaused = false,
+  onContinue
 }: SudokuGridComponentProps) {
   const [showWheel, setShowWheel] = useState(false);
   const [wheelPosition, setWheelPosition] = useState({ x: 0, y: 0 });
@@ -207,7 +211,7 @@ export function SudokuGridComponent({
   };
 
   const handleCellClick = (row: number, col: number, e: React.MouseEvent) => {
-    if (readOnly || isInitialCell(row, col)) return;
+    if (readOnly || isInitialCell(row, col) || isPaused) return;
 
     onCellSelect?.(row, col);
 
@@ -223,7 +227,7 @@ export function SudokuGridComponent({
   };
 
   const handleCellLongPress = (row: number, col: number, e: React.MouseEvent | React.TouchEvent) => {
-    if (readOnly || isInitialCell(row, col)) return;
+    if (readOnly || isInitialCell(row, col) || isPaused) return;
 
     e.preventDefault();
     
@@ -236,7 +240,7 @@ export function SudokuGridComponent({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent, row: number, col: number) => {
-    if (readOnly || isInitialCell(row, col)) return;
+    if (readOnly || isInitialCell(row, col) || isPaused) return;
 
     const key = e.key;
     if (key >= '1' && key <= '9') {
@@ -265,128 +269,134 @@ export function SudokuGridComponent({
     if (isConflict && conflictType === 'column') return 'bg-yellow-200/60 dark:bg-yellow-800/30';
     if (isConflict && conflictType === 'box') return 'bg-yellow-200/60 dark:bg-yellow-800/30';
     if (isConflict) return 'bg-yellow-100/80 dark:bg-yellow-900/40';
-    if (isHighlightedCell) return 'bg-yellow-100/60 dark:bg-yellow-900/30';
+    if (isHighlightedCell) return 'bg-green-100/60 dark:bg-green-900/30';
     
     return 'bg-background hover:bg-muted/30';
   };
 
-  // 创建9个3x3的子网格
-  const renderSubGrid = (startRow: number, startCol: number) => {
-    const cells = [];
-    for (let i = 0; i < 3; i++) {
-      for (let j = 0; j < 3; j++) {
-        const row = startRow + i;
-        const col = startCol + j;
-        const cell = grid[row][col];
-        const isSelected = selectedCell?.row === row && selectedCell?.col === col;
-        const isInitial = isInitialCell(row, col);
-        const isAutoSolved = isAutoSolvedCell(row, col);
-        const isConflict = isConflictCell(row, col);
-        
-        cells.push(
-          <motion.button
-            key={`${row}-${col}`}
-            className={cn(
-              "relative w-full h-full flex items-center justify-center text-base md:text-lg font-medium",
-              "border border-border/30 transition-all duration-200",
-              getCellBackground(row, col),
-              isSelected && "ring-2 ring-primary ring-inset z-20",
-              !readOnly && !isInitial && "cursor-pointer",
-              (readOnly || isInitial) && "cursor-default"
-            )}
-            onClick={(e) => handleCellClick(row, col, e)}
-            onMouseDown={(e) => {
-              if (isMobile) {
-                const timer = setTimeout(() => {
-                  handleCellLongPress(row, col, e);
-                }, 500);
-                
-                const cleanup = () => {
-                  clearTimeout(timer);
-                  document.removeEventListener('mouseup', cleanup);
-                };
-                
-                document.addEventListener('mouseup', cleanup);
-              }
-            }}
-            onTouchStart={(e) => {
-              const timer = setTimeout(() => {
-                handleCellLongPress(row, col, e);
-              }, 500);
-              
-              const cleanup = () => {
-                clearTimeout(timer);
-                document.removeEventListener('touchend', cleanup);
-              };
-              
-              document.addEventListener('touchend', cleanup);
-            }}
-            onKeyDown={(e) => handleKeyDown(e, row, col)}
-            tabIndex={readOnly || isInitial ? -1 : 0}
-            disabled={readOnly || isInitial}
-            whileHover={!readOnly && !isInitial ? { scale: 1.02 } : {}}
-            whileTap={!readOnly && !isInitial ? { scale: 0.98 } : {}}
-          >
-            <AnimatePresence mode="wait">
-              {cell && (
-                <motion.span
-                  key={`${row}-${col}-${cell}`}
-                  initial={{ scale: 0, opacity: 0, rotateZ: -180 }}
-                  animate={{ scale: 1, opacity: 1, rotateZ: 0 }}
-                  exit={{ scale: 0, opacity: 0, rotateZ: 180 }}
-                  transition={{ 
-                    type: 'spring', 
-                    stiffness: 300, 
-                    damping: 20,
-                    duration: 0.3
-                  }}
-                  className={cn(
-                    "font-semibold",
-                    isInitial && "text-foreground",
-                    !isInitial && !isAutoSolved && "text-primary",
-                    isAutoSolved && "text-muted-foreground",
-                    isConflict && "text-yellow-600 dark:text-yellow-400"
-                  )}
-                >
-                  {cell}
-                </motion.span>
+  // 渲染单个格子
+  const renderCell = (row: number, col: number) => {
+    const cell = grid[row][col];
+    const isSelected = selectedCell?.row === row && selectedCell?.col === col;
+    const isInitial = isInitialCell(row, col);
+    const isAutoSolved = isAutoSolvedCell(row, col);
+    const isConflict = isConflictCell(row, col);
+    
+    // 计算边框样式
+    const isRightThick = (col + 1) % 3 === 0 && col < 8;
+    const isBottomThick = (row + 1) % 3 === 0 && row < 8;
+    
+    return (
+      <motion.button
+        key={`${row}-${col}`}
+        className={cn(
+          "relative w-full h-full flex items-center justify-center text-base md:text-lg font-medium",
+          "border-r border-b border-border/40 transition-all duration-200",
+          isRightThick && "border-r-2 border-r-border",
+          isBottomThick && "border-b-2 border-b-border",
+          getCellBackground(row, col),
+          isSelected && "ring-2 ring-primary ring-inset z-20",
+          !readOnly && !isInitial && !isPaused && "cursor-pointer",
+          (readOnly || isInitial || isPaused) && "cursor-default"
+        )}
+        onClick={(e) => handleCellClick(row, col, e)}
+        onMouseDown={(e) => {
+          if (isMobile && !isPaused) {
+            const timer = setTimeout(() => {
+              handleCellLongPress(row, col, e);
+            }, 500);
+            
+            const cleanup = () => {
+              clearTimeout(timer);
+              document.removeEventListener('mouseup', cleanup);
+            };
+            
+            document.addEventListener('mouseup', cleanup);
+          }
+        }}
+        onTouchStart={(e) => {
+          if (!isPaused) {
+            const timer = setTimeout(() => {
+              handleCellLongPress(row, col, e);
+            }, 500);
+            
+            const cleanup = () => {
+              clearTimeout(timer);
+              document.removeEventListener('touchend', cleanup);
+            };
+            
+            document.addEventListener('touchend', cleanup);
+          }
+        }}
+        onKeyDown={(e) => handleKeyDown(e, row, col)}
+        tabIndex={readOnly || isInitial || isPaused ? -1 : 0}
+        disabled={readOnly || isInitial || isPaused}
+        whileHover={!readOnly && !isInitial && !isPaused ? { scale: 1.02 } : {}}
+        whileTap={!readOnly && !isInitial && !isPaused ? { scale: 0.98 } : {}}
+      >
+        <AnimatePresence mode="wait">
+          {cell && (
+            <motion.span
+              key={`${row}-${col}-${cell}`}
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ 
+                type: 'spring', 
+                stiffness: 400, 
+                damping: 25,
+                duration: 0.15
+              }}
+              className={cn(
+                "font-semibold",
+                isInitial && "text-foreground",
+                !isInitial && !isAutoSolved && "text-primary",
+                isAutoSolved && "text-muted-foreground",
+                isConflict && "text-yellow-600 dark:text-yellow-400"
               )}
-            </AnimatePresence>
-          </motion.button>
-        );
-      }
-    }
-    return cells;
+            >
+              {cell}
+            </motion.span>
+          )}
+        </AnimatePresence>
+      </motion.button>
+    );
   };
 
   return (
     <div className={cn("relative", className)}>
+      {/* 暂停覆盖层和继续按钮 */}
+      {isPaused && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center backdrop-blur-sm rounded-xl">
+          <Button 
+            onClick={onContinue}
+            size="lg"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-8 py-4 text-lg shadow-lg"
+          >
+            <Play className="w-6 h-6 mr-2" />
+            继续游戏
+          </Button>
+        </div>
+      )}
+      
       {/* 主棋盘容器 */}
-      <div className="inline-block bg-background rounded-xl shadow-xl border-4 border-border p-2">
-        {/* 9x9网格，使用3x3的子网格布局 */}
-        <div className="grid grid-cols-3 grid-rows-3 gap-2 bg-border rounded-lg p-2">
-          {/* 渲染9个3x3子网格 */}
-          {Array.from({ length: 9 }).map((_, index) => {
-            const subGridRow = Math.floor(index / 3);
-            const subGridCol = index % 3;
-            const startRow = subGridRow * 3;
-            const startCol = subGridCol * 3;
-            
-            return (
-              <div
-                key={`subgrid-${index}`}
-                className="grid grid-cols-3 grid-rows-3 bg-background rounded-md shadow-sm border border-border/50 w-32 h-32 md:w-40 md:h-40"
-              >
-                {renderSubGrid(startRow, startCol)}
-              </div>
-            );
+      <div className={cn(
+        "w-full max-w-lg mx-auto bg-card rounded-xl border transition-all duration-300 card-enhanced",
+        isPaused && "blur-sm"
+      )}>
+        {/* 9x9统一网格 */}
+        <div className="grid grid-cols-9 grid-rows-9 bg-background border-2 border-border w-full aspect-square rounded-lg overflow-hidden">
+          {/* 渲染所有格子 */}
+          {Array.from({ length: 81 }).map((_, index) => {
+            const row = Math.floor(index / 9);
+            const col = index % 9;
+            return renderCell(row, col);
           })}
         </div>
       </div>
 
       {/* 数字轮盘 */}
       <AnimatePresence>
-        {showWheel && (
+        {showWheel && !isPaused && (
           <NumberWheel
             onSelect={handleWheelSelect}
             onClose={() => {

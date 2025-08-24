@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -31,7 +31,8 @@ import {
   EyeOff,
   ChevronLeft,
   ChevronRight,
-  Settings
+  Settings,
+  Plus
 } from 'lucide-react';
 
 interface GeneratedPuzzle {
@@ -50,7 +51,8 @@ interface PrintSettings {
 export function GenerateMode() {
   const [puzzles, setPuzzles] = useState<GeneratedPuzzle[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [selectedDifficulty, setSelectedDifficulty] = useState<Difficulty>('medium');
+  const [selectedDifficulty, setSelectedDifficulty] = useState<Difficulty>('easy');
+  const [tempSelectedDifficulty, setTempSelectedDifficulty] = useState<Difficulty | null>(null);
   const [puzzleCount, setPuzzleCount] = useState(4);
   const [isGenerating, setIsGenerating] = useState(false);
   const [showSolutions, setShowSolutions] = useState(false);
@@ -71,6 +73,15 @@ export function GenerateMode() {
   ];
 
   const puzzlesPerPageOptions = [1, 2, 4, 6, 8, 9, 12];
+
+  // 难度选择对话框状态管理
+  useEffect(() => {
+    if (showDifficultyDialog) {
+      setTempSelectedDifficulty(null);
+    } else {
+      setTempSelectedDifficulty(null);
+    }
+  }, [showDifficultyDialog]);
 
   const generatePuzzles = async () => {
     if (puzzleCount < 1 || puzzleCount > 50) {
@@ -169,6 +180,7 @@ export function GenerateMode() {
             display: inline-block;
             margin: 10px;
             page-break-inside: avoid;
+            max-width: 300px;
           }
           .grid-container {
             display: grid;
@@ -198,10 +210,35 @@ export function GenerateMode() {
             font-size: 12px;
           }
           .puzzles-row {
-            display: flex;
-            flex-wrap: wrap;
+            display: grid;
+            gap: 20px;
             justify-content: center;
             margin-bottom: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          }
+          .puzzles-row.grid-1 {
+            grid-template-columns: 1fr;
+          }
+          .puzzles-row.grid-2 {
+            grid-template-columns: repeat(2, 1fr);
+          }
+          .puzzles-row.grid-3 {
+            grid-template-columns: repeat(3, 1fr);
+          }
+          .puzzles-row.grid-4 {
+            grid-template-columns: repeat(2, 1fr);
+          }
+          .puzzles-row.grid-6 {
+            grid-template-columns: repeat(3, 1fr);
+          }
+          .puzzles-row.grid-8 {
+            grid-template-columns: repeat(4, 1fr);
+          }
+          .puzzles-row.grid-9 {
+            grid-template-columns: repeat(3, 1fr);
+          }
+          .puzzles-row.grid-12 {
+            grid-template-columns: repeat(4, 1fr);
           }
           @media print {
             .page-break {
@@ -228,7 +265,7 @@ export function GenerateMode() {
         html += '<div class="page-break"></div>';
       }
       
-      html += '<div class="puzzles-row">';
+      html += `<div class="puzzles-row grid-${puzzlesPerPage}">`;
       
       for (let j = i; j < Math.min(i + puzzlesPerPage, puzzles.length); j++) {
         const puzzle = puzzles[j];
@@ -302,10 +339,10 @@ export function GenerateMode() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* 左侧 - 数独显示区域 */}
         <div className="lg:col-span-2">
-          <Card className="h-fit">
+          <Card className="h-fit card-enhanced">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-lg">数独题目</CardTitle>
+                <CardTitle className="text-lg font-semibold">数独题目</CardTitle>
                 {puzzles.length > 0 && (
                   <Badge variant="outline">
                     {currentIndex + 1} / {puzzles.length}
@@ -318,24 +355,14 @@ export function GenerateMode() {
                 <div className="space-y-4">
                   {/* 数独网格区域 */}
                   <div className="flex justify-center">
-                    <AnimatePresence mode="wait">
-                      <motion.div
-                        key={currentIndex}
-                        initial={{ opacity: 0, x: 50 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: -50 }}
-                        transition={{ duration: 0.2 }}
-                      >
-                        <SudokuGridComponent
-                          grid={showSolutions ? currentPuzzle.solution : currentPuzzle.puzzle}
-                          initialGrid={currentPuzzle.puzzle}
-                          conflicts={[]}
-                          onCellChange={() => {}}
-                          readOnly={true}
-                          className="w-full max-w-lg"
-                        />
-                      </motion.div>
-                    </AnimatePresence>
+                    <SudokuGridComponent
+                      grid={showSolutions ? currentPuzzle.solution : currentPuzzle.puzzle}
+                      initialGrid={currentPuzzle.puzzle}
+                      conflicts={[]}
+                      onCellChange={() => {}}
+                      readOnly={true}
+                      className="w-full max-w-lg"
+                    />
                   </div>
 
                   {/* 导航控制 */}
@@ -376,7 +403,7 @@ export function GenerateMode() {
                 <div className="text-center py-12 text-muted-foreground">
                   <Grid3X3 className="w-16 h-16 mx-auto mb-4 opacity-50" />
                   <p className="text-lg">还没有生成数独题目</p>
-                  <p className="text-sm">点击右侧的"生成数独"按钮开始</p>
+                  <p className="text-sm">点击右侧的&quot;生成数独&quot;按钮开始</p>
                 </div>
               )}
             </CardContent>
@@ -386,9 +413,9 @@ export function GenerateMode() {
         {/* 右侧 - 控制面板 */}
         <div className="space-y-4">
           {/* 生成设置 */}
-          <Card>
+          <Card className="card-enhanced">
             <CardHeader className="pb-3">
-              <CardTitle className="text-lg">生成设置</CardTitle>
+              <CardTitle className="text-lg font-semibold">生成设置</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
@@ -399,7 +426,7 @@ export function GenerateMode() {
                   onClick={() => setShowDifficultyDialog(true)}
                 >
                   {SudokuUtils.getDifficultyName(selectedDifficulty)}
-                  <Settings className="w-4 h-4" />
+                  <Plus className="w-4 h-4" />
                 </Button>
               </div>
 
@@ -438,9 +465,9 @@ export function GenerateMode() {
 
           {/* 操作按钮 */}
           {puzzles.length > 0 && (
-            <Card>
+            <Card className="card-enhanced">
               <CardHeader className="pb-3">
-                <CardTitle className="text-lg">操作</CardTitle>
+                <CardTitle className="text-lg font-semibold">操作</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <Button
@@ -488,9 +515,10 @@ export function GenerateMode() {
             {difficulties.map((diff) => (
               <Button
                 key={diff.value}
-                variant={selectedDifficulty === diff.value ? "default" : "outline"}
+                variant={tempSelectedDifficulty === diff.value ? "default" : "outline"}
                 className="justify-start h-auto p-4 text-left"
                 onClick={() => {
+                  setTempSelectedDifficulty(diff.value);
                   setSelectedDifficulty(diff.value);
                   setShowDifficultyDialog(false);
                 }}
