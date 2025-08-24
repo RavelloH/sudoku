@@ -4,7 +4,10 @@
       "Bash(pnpm lint:*)",
       "Bash(pnpm install)",
       "Bash(pnpm build:*)",
-      "Bash(pnpm dev:*)"
+      "Bash(pnpm dev:*)",
+      "Bash(PORT=3011 pnpm dev)",
+      "Bash(PORT=3012 pnpm dev)",
+      "Bash(PORT=3013 pnpm dev)"
     ],
     "deny": [],
     "ask": []

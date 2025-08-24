@@ -245,10 +245,8 @@ export function ChallengeMode({ onSwitchToSolver, gameToLoad }: ChallengeProps) 
     setCurrentGame(updatedGame);
     setCurrentMoveIndex(newMoves.length - 1);
     
-    // 保存游戏状态
-    if (gameStarted) {
-      StorageUtils.saveGame(updatedGame);
-    }
+    // 总是保存游戏状态
+    StorageUtils.saveGame(updatedGame);
   }, [currentGame, currentMoveIndex, elapsedTime, gameStarted]);
 
   const undo = useCallback(() => {
@@ -267,9 +265,8 @@ export function ChallengeMode({ onSwitchToSolver, gameToLoad }: ChallengeProps) 
     setCurrentGame(updatedGame);
     setCurrentMoveIndex(currentMoveIndex - 1);
     
-    if (gameStarted) {
-      StorageUtils.saveGame(updatedGame);
-    }
+    // 总是保存游戏状态
+    StorageUtils.saveGame(updatedGame);
   }, [currentGame, currentMoveIndex, elapsedTime, gameStarted]);
 
   const redo = useCallback(() => {
@@ -288,9 +285,8 @@ export function ChallengeMode({ onSwitchToSolver, gameToLoad }: ChallengeProps) 
     setCurrentGame(updatedGame);
     setCurrentMoveIndex(currentMoveIndex + 1);
     
-    if (gameStarted) {
-      StorageUtils.saveGame(updatedGame);
-    }
+    // 总是保存游戏状态
+    StorageUtils.saveGame(updatedGame);
   }, [currentGame, currentMoveIndex, elapsedTime, gameStarted]);
 
   const getHint = useCallback(() => {
@@ -365,7 +361,8 @@ export function ChallengeMode({ onSwitchToSolver, gameToLoad }: ChallengeProps) 
     setHighlightedCells(new Set());
     setSelectedCell(null);
     
-    // 不保存到历史记录直到用户开始输入
+    // 立即保存重新开始的游戏
+    StorageUtils.saveGame(restartedGame);
   }, [currentGame]);
 
   const handleSwitchToSolver = () => {

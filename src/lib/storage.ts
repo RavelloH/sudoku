@@ -3,8 +3,7 @@ import { SudokuGame, GameStats, Difficulty } from '@/types/sudoku';
 const STORAGE_KEYS = {
   GAMES: 'sudoku_games',
   STATS: 'sudoku_stats',
-  SETTINGS: 'sudoku_settings',
-  CURRENT_GAME: 'sudoku_current_game'
+  SETTINGS: 'sudoku_settings'
 };
 
 export interface GameSettings {
@@ -26,14 +25,6 @@ export class StorageUtils {
       }
       
       localStorage.setItem(STORAGE_KEYS.GAMES, JSON.stringify(games));
-      
-      // 如果游戏尚未完成，也保存为当前游戏
-      if (!game.isCompleted) {
-        localStorage.setItem(STORAGE_KEYS.CURRENT_GAME, JSON.stringify(game));
-      } else {
-        // 如果游戏完成，清除当前游戏
-        localStorage.removeItem(STORAGE_KEYS.CURRENT_GAME);
-      }
     } catch (error) {
       console.error('Failed to save game:', error);
     }
@@ -41,15 +32,24 @@ export class StorageUtils {
 
   static getCurrentGame(): SudokuGame | null {
     try {
-      const stored = localStorage.getItem(STORAGE_KEYS.CURRENT_GAME);
-      if (!stored) return null;
+      // 从所有游戏中找到未完成的游戏作为当前游戏
+      const allGames = this.getAllGamesIncludingUnstarted();
+      const incompleteGames = allGames.filter(game => !game.isCompleted);
       
-      const game = JSON.parse(stored);
+      // 如果有多个未完成的游戏，返回最近的一个
+      if (incompleteGames.length === 0) return null;
+      
+      const currentGame = incompleteGames.reduce((latest, game) => {
+        const latestTime = new Date(latest.startTime).getTime();
+        const gameTime = new Date(game.startTime).getTime();
+        return gameTime > latestTime ? game : latest;
+      }, incompleteGames[0]);
+      
       return {
-        ...game,
-        startTime: new Date(game.startTime),
-        endTime: game.endTime ? new Date(game.endTime) : undefined,
-        moves: game.moves.map((move: any) => ({
+        ...currentGame,
+        startTime: new Date(currentGame.startTime),
+        endTime: currentGame.endTime ? new Date(currentGame.endTime) : undefined,
+        moves: currentGame.moves.map((move: any) => ({
           ...move,
           timestamp: new Date(move.timestamp)
         }))
@@ -235,6 +235,11 @@ export class StorageUtils {
       localStorage.removeItem(STORAGE_KEYS.GAMES);
       localStorage.removeItem(STORAGE_KEYS.STATS);
       localStorage.removeItem(STORAGE_KEYS.SETTINGS);
+      
+      // 清理旧的 CURRENT_GAME 键（如果存在）
+      if (localStorage.getItem('sudoku_current_game')) {
+        localStorage.removeItem('sudoku_current_game');
+      }
     } catch (error) {
       console.error('Failed to clear data:', error);
     }

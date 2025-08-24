@@ -404,7 +404,7 @@ export function HistoryMode({ onSwitchToChallenge }: { onSwitchToChallenge?: (ga
             <CardHeader className="pb-3">
               <CardTitle className="text-lg font-semibold">游戏记录</CardTitle>
             </CardHeader>
-            <CardContent className="max-h-[600px] overflow-y-auto">
+            <CardContent className="max-h-[600px] overflow-y-auto custom-scrollbar">
               {games.length === 0 ? (
                 <div className="text-center py-8">
                   <History className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
