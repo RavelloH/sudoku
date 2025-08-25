@@ -80,7 +80,7 @@ export function ChallengeMode({ onSwitchToSolver, gameToLoad }: ChallengeProps) 
 
   // 计时器状态同步
   useEffect(() => {
-    const shouldTimerRun = currentGame && gameStarted && !isPaused && !currentGame.isCompleted;
+    const shouldTimerRun = !!(currentGame && gameStarted && !isPaused && !currentGame.isCompleted);
     setIsTimerActive(shouldTimerRun);
   }, [currentGame?.isCompleted, gameStarted, isPaused, !!currentGame]);
 
