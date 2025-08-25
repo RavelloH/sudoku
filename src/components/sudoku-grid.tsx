@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { SudokuGrid, SudokuCell, Conflict } from '@/types/sudoku';
+import { SudokuGrid, SudokuCell, Conflict, HighlightStep } from '@/types/sudoku';
 import { Button } from '@/components/ui/button';
 import { Trash2, Play } from 'lucide-react';
 
@@ -17,6 +17,8 @@ interface SudokuGridComponentProps {
   selectedCell?: { row: number; col: number } | null;
   readOnly?: boolean;
   highlightedCells?: Set<string>;
+  sequenceHighlights?: HighlightStep[];
+  onSequenceHighlightsClear?: () => void;
   className?: string;
   isPaused?: boolean;
   onContinue?: () => void;
@@ -165,6 +167,8 @@ export function SudokuGridComponent({
   selectedCell,
   readOnly = false,
   highlightedCells = new Set(),
+  sequenceHighlights = [],
+  onSequenceHighlightsClear,
   className,
   isPaused = false,
   onContinue
@@ -173,6 +177,9 @@ export function SudokuGridComponent({
   const [wheelPosition, setWheelPosition] = useState({ x: 0, y: 0 });
   const [wheelCell, setWheelCell] = useState<{ row: number; col: number } | null>(null);
   const [isMobile, setIsMobile] = useState(false);
+  const [currentSequenceHighlight, setCurrentSequenceHighlight] = useState<Set<string>>(new Set());
+  const [hintHighlightIntensity, setHintHighlightIntensity] = useState<number>(0);
+  const [currentActiveStep, setCurrentActiveStep] = useState<HighlightStep | null>(null);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -184,6 +191,63 @@ export function SudokuGridComponent({
     
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  // 处理序列高亮
+  useEffect(() => {
+    if (sequenceHighlights.length === 0) {
+      setCurrentSequenceHighlight(new Set());
+      setHintHighlightIntensity(0);
+      setCurrentActiveStep(null);
+      return;
+    }
+
+    const highlightSet = new Set<string>();
+    const removalTimers: NodeJS.Timeout[] = [];
+    
+    // 找到最长的延迟时间（最后一个步骤的延迟时间）
+    const maxDelay = Math.max(...sequenceHighlights.map(step => step.delay));
+    
+    // 为每个步骤设置独立的高亮时间
+    sequenceHighlights.forEach((step, index) => {
+      const cellKey = `${step.row}-${step.col}`;
+      
+      // 设置延迟开始高亮
+      const startTimer = setTimeout(() => {
+        // console.log(`Adding cell ${cellKey} to highlight, isHint: ${step.isHintCell}, value: ${step.value}`);
+        highlightSet.add(cellKey);
+        // console.log('Highlight set before:', Array.from(highlightSet));
+        setCurrentSequenceHighlight(new Set(highlightSet));
+        setCurrentActiveStep(step);
+        
+        // 如果是提示单元格，增加高亮强度
+        if (step.isHintCell) {
+          setHintHighlightIntensity(1);
+          // console.log('Set hint intensity to 1 for cell', cellKey);
+        }
+      }, step.delay);
+      
+      removalTimers.push(startTimer);
+    });
+    
+    // 设置统一的清除时间（所有高亮完成后2秒清除所有）
+    const clearTimer = setTimeout(() => {
+      // console.log('Clearing all highlights');
+      setCurrentSequenceHighlight(new Set());
+      setHintHighlightIntensity(0);
+      setCurrentActiveStep(null);
+      // 清除序列高亮数据，这样蓝色高亮也会消失
+      if (onSequenceHighlightsClear) {
+        onSequenceHighlightsClear();
+      }
+    }, maxDelay + 2000); // 额外2秒让用户看清所有高亮
+    
+    removalTimers.push(clearTimer);
+    
+    // 清理定时器
+    return () => {
+      removalTimers.forEach(timer => clearTimeout(timer));
+    };
+  }, [sequenceHighlights, onSequenceHighlightsClear]);
 
   const isInitialCell = (row: number, col: number): boolean => {
     return initialGrid[row][col] !== null;
@@ -208,6 +272,31 @@ export function SudokuGridComponent({
 
   const isHighlighted = (row: number, col: number): boolean => {
     return highlightedCells.has(`${row}-${col}`);
+  };
+
+  const isSequenceHighlighted = (row: number, col: number): boolean => {
+    return currentSequenceHighlight.has(`${row}-${col}`);
+  };
+
+  const isHintCellHighlighted = (row: number, col: number): boolean => {
+    const cellKey = `${row}-${col}`;
+    const isHintStep = sequenceHighlights.some(step => 
+      step.isHintCell && `${step.row}-${step.col}` === cellKey
+    );
+    
+    // 如果不是提示单元格，直接返回false
+    if (!isHintStep) return false;
+    
+    // 如果序列没有激活，返回false
+    if (sequenceHighlights.length === 0) return false;
+    
+    // 在整个序列期间，提示单元格始终保持蓝色高亮
+    const result = true;
+    
+    // 只为提示单元格输出调试信息
+    // console.log(`Hint cell ${cellKey}: always blue during sequence, result=${result}`);
+    
+    return result;
   };
 
   const handleCellClick = (row: number, col: number, e: React.MouseEvent) => {
@@ -264,7 +353,10 @@ export function SudokuGridComponent({
     const conflictType = getConflictType(row, col);
     const isHighlightedCell = isHighlighted(row, col);
     const isAutoSolved = isAutoSolvedCell(row, col);
+    const isSequenceHighlightedCell = isSequenceHighlighted(row, col);
+    const isHintHighlightedCell = isHintCellHighlighted(row, col);
     
+            
     if (isSelected) return 'bg-primary/20';
     if (isConflict) {
       // 所有冲突的数字都显示黄色背景（包括初始数字）
@@ -272,6 +364,14 @@ export function SudokuGridComponent({
       if (conflictType === 'column') return 'bg-yellow-200/60 dark:bg-yellow-800/30';
       if (conflictType === 'box') return 'bg-yellow-200/60 dark:bg-yellow-800/30';
       return 'bg-yellow-100/80 dark:bg-yellow-900/40';
+    }
+    if (isHintHighlightedCell) {
+      // 提示单元格使用更明显的蓝色高亮
+      return 'bg-blue-300/70 dark:bg-blue-700/40';
+    }
+    if (isSequenceHighlightedCell) {
+      // 序列高亮使用橙色
+      return 'bg-orange-200/60 dark:bg-orange-800/30';
     }
     if (isAutoSolved) {
       // 自动推导的数字不显示特殊背景色
@@ -289,6 +389,8 @@ export function SudokuGridComponent({
     const isInitial = isInitialCell(row, col);
     const isAutoSolved = isAutoSolvedCell(row, col);
     const isConflict = isConflictCell(row, col);
+    const isSequenceHighlightedCell = isSequenceHighlighted(row, col);
+    const isHintHighlightedCell = isHintCellHighlighted(row, col);
     
       
     // 计算边框样式
@@ -343,30 +445,33 @@ export function SudokuGridComponent({
         whileHover={!readOnly && !isInitial && !isAutoSolved && !isPaused ? { scale: 1.02 } : {}}
         whileTap={!readOnly && !isInitial && !isAutoSolved && !isPaused ? { scale: 0.98 } : {}}
       >
-        <AnimatePresence mode="wait">
-          {cell && (
-            <motion.span
-              key={`${row}-${col}-${cell}`}
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ 
-                type: 'spring', 
-                stiffness: 400, 
-                damping: 25,
-                duration: 0.15
-              }}
-              className={cn(
-                "font-semibold",
-                isInitial && "text-foreground",
-                isAutoSolved && "text-gray-500", // 暗灰色，更透明
-                !isInitial && !isAutoSolved && "text-primary",
-                isConflict && !isInitial && "text-yellow-600 dark:text-yellow-400" // 只有用户输入的冲突数字才变色
-              )}
-            >
-              {cell}
-            </motion.span>
-          )}
-        </AnimatePresence>
+        {cell && (
+          <motion.span
+            key={`${row}-${col}-${cell}`}
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ 
+              scale: 1,
+              opacity: 1,
+            }}
+            transition={{ 
+              type: 'spring', 
+              stiffness: 400, 
+              damping: 25,
+              duration: 0.15
+            }}
+            className={cn(
+              "font-semibold",
+              isInitial && "text-foreground",
+              isAutoSolved && "text-gray-500", // 暗灰色，更透明
+              !isInitial && !isAutoSolved && "text-primary",
+              isConflict && !isInitial && "text-yellow-600 dark:text-yellow-400", // 只有用户输入的冲突数字才变色
+              isSequenceHighlightedCell && !isHintHighlightedCell && "text-orange-600 dark:text-orange-400",
+              isHintHighlightedCell && "text-blue-600 dark:text-blue-400 font-bold"
+            )}
+          >
+            {cell}
+          </motion.span>
+        )}
       </motion.button>
     );
   };

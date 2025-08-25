@@ -166,7 +166,7 @@ export function SudokuApp() {
 
         const result = await cloudStorage.uploadLocalData(localData);
         if (result.success) {
-          console.log('Local data uploaded to cloud successfully');
+          // console.log('Local data uploaded to cloud successfully');
         }
       } catch (error) {
         console.error('Auto upload failed:', error);

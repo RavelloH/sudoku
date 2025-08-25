@@ -34,7 +34,8 @@ import {
   SudokuGame, 
   Move, 
   Difficulty,
-  Hint 
+  Hint,
+  HighlightStep 
 } from '@/types/sudoku';
 import { 
   Sparkles, 
@@ -70,6 +71,7 @@ export function ChallengeMode({ onSwitchToSolver, gameToLoad }: ChallengeProps) 
   const [elapsedTime, setElapsedTime] = useState(0);
   const [gameStarted, setGameStarted] = useState(false); // 是否已开始游戏（输入了第一个数字）
   const [highlightedCells, setHighlightedCells] = useState<Set<string>>(new Set());
+  const [sequenceHighlights, setSequenceHighlights] = useState<HighlightStep[]>([]);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const gameLoadedRef = useRef(false); // 跟踪是否已经处理了 gameToLoad
 
@@ -180,14 +182,14 @@ export function ChallengeMode({ onSwitchToSolver, gameToLoad }: ChallengeProps) 
   // 页面可见性变化时暂停/恢复计时
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (document.hidden) {
+      if (document.hidden && currentGame && gameStarted && !currentGame.isCompleted) {
         setIsPaused(true);
       }
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, []);
+  }, [currentGame, gameStarted]);
 
   // 难度选择对话框状态管理
   useEffect(() => {
@@ -336,11 +338,117 @@ export function ChallengeMode({ onSwitchToSolver, gameToLoad }: ChallengeProps) 
     StorageUtils.saveGame(updatedGame);
   }, [currentGame, currentMoveIndex, elapsedTime, gameStarted]);
 
+  const clearSequenceHighlights = useCallback(() => {
+    setSequenceHighlights([]);
+  }, []);
+
+  const generateSequenceHighlightSteps = useCallback((hint: Hint, grid: SudokuGrid): HighlightStep[] => {
+    const steps: HighlightStep[] = [];
+    let delay = 0;
+    
+    // 收集相关行、列、宫的所有数字位置（排除提示单元格位置）
+    const relatedCells: Array<{row: number, col: number, value: number}> = [];
+    
+    // 检查同行（排除提示单元格）
+    for (let col = 0; col < 9; col++) {
+      if (col === hint.col) continue; // 跳过提示单元格列
+      const value = grid[hint.row][col];
+      if (value !== null) {
+        relatedCells.push({row: hint.row, col, value});
+      }
+    }
+    
+    // 检查同列（排除提示单元格）
+    for (let row = 0; row < 9; row++) {
+      if (row === hint.row) continue; // 跳过提示单元格行
+      const value = grid[row][hint.col];
+      if (value !== null) {
+        relatedCells.push({row, col: hint.col, value});
+      }
+    }
+    
+    // 检查同宫（排除提示单元格）
+    const boxRow = Math.floor(hint.row / 3) * 3;
+    const boxCol = Math.floor(hint.col / 3) * 3;
+    for (let r = boxRow; r < boxRow + 3; r++) {
+      for (let c = boxCol; c < boxCol + 3; c++) {
+        if (r === hint.row && c === hint.col) continue; // 跳过提示单元格
+        const value = grid[r][c];
+        if (value !== null) {
+          relatedCells.push({row: r, col: c, value});
+        }
+      }
+    }
+    
+    // 按数字值分组，每个数字只取一个代表位置
+    const valueMap = new Map<number, {row: number, col: number, value: number}>();
+    relatedCells.forEach(cell => {
+      if (!valueMap.has(cell.value)) {
+        valueMap.set(cell.value, cell);
+      }
+    });
+    
+    const uniqueValues = Array.from(valueMap.values());
+    
+    // 按数字值排序
+    uniqueValues.sort((a, b) => a.value - b.value);
+    
+    // 分组：小于提示数字的和大于提示数字的
+    const smallerNumbers = uniqueValues.filter(cell => cell.value < hint.value);
+    const largerNumbers = uniqueValues.filter(cell => cell.value > hint.value);
+    
+    // 第一阶段：提示单元格蓝色高亮（空值）
+    steps.push({
+      row: hint.row,
+      col: hint.col,
+      // @ts-expect-error 忽略 null
+      value: null, // 不显示数字
+      isHintCell: true,
+      delay: delay
+    });
+    delay += 400;
+    
+    // 第二阶段：依次高亮小于提示数字的数字
+    smallerNumbers.forEach(cell => {
+      steps.push({
+        row: cell.row,
+        col: cell.col,
+        value: cell.value,
+        delay: delay
+      });
+      delay += 400;
+    });
+    
+    // 第三阶段：提示单元格显示提示数字
+    steps.push({
+      row: hint.row,
+      col: hint.col,
+      value: hint.value,
+      isHintCell: true,
+      delay: delay
+    });
+    delay += 400;
+    
+    // 第四阶段：依次高亮大于提示数字的数字
+    largerNumbers.forEach(cell => {
+      steps.push({
+        row: cell.row,
+        col: cell.col,
+        value: cell.value,
+        delay: delay
+      });
+      delay += 400;
+    });
+    
+    return steps;
+  }, []);
+
   const getHint = useCallback(() => {
     if (!currentGame || currentGame.isCompleted) return;
 
     const hint = SudokuUtils.getHint(currentGame.currentGrid);
     if (hint) {
+      
       // 如果游戏还没开始，提示数字应该开始计时
       if (!gameStarted) {
         setGameStarted(true);
@@ -354,52 +462,29 @@ export function ChallengeMode({ onSwitchToSolver, gameToLoad }: ChallengeProps) 
         setCurrentGame(updatedGame);
       }
       
-      // 填入提示数字
-      makeMove(hint.row, hint.col, hint.value, true);
+      // 先生成序列高亮步骤（使用填入数字前的网格状态）
+      const steps = generateSequenceHighlightSteps(hint, currentGame.currentGrid);
       
-      // 高亮显示相关数字
-      const cellsToHighlight = new Set<string>();
+      // 设置序列高亮（不立即填入数字）
+      setSequenceHighlights(steps);
       
-      // 高亮同行、同列、同宫的数字
-      for (let i = 0; i < 9; i++) {
-        // 同行
-        if (currentGame.currentGrid[hint.row][i] === hint.value) {
-          cellsToHighlight.add(`${hint.row}-${i}`);
-        }
-        // 同列
-        if (currentGame.currentGrid[i][hint.col] === hint.value) {
-          cellsToHighlight.add(`${i}-${hint.col}`);
-        }
-      }
+      // 计算第三阶段的延迟时间（蓝色数字出现时）
+      const hintNumberDelay = steps.find(step => 
+        step.isHintCell && step.value !== null
+      )?.delay || 0;
       
-      // 同宫
-      const boxRow = Math.floor(hint.row / 3) * 3;
-      const boxCol = Math.floor(hint.col / 3) * 3;
-      for (let r = boxRow; r < boxRow + 3; r++) {
-        for (let c = boxCol; c < boxCol + 3; c++) {
-          if (currentGame.currentGrid[r][c] === hint.value) {
-            cellsToHighlight.add(`${r}-${c}`);
-          }
-        }
-      }
-      
-      // 特别高亮填入的数字
-      cellsToHighlight.add(`${hint.row}-${hint.col}`);
-      
-      setHighlightedCells(cellsToHighlight);
-      
-      // 3秒后清除高亮
+      // 在蓝色数字出现时填入真实数字
       setTimeout(() => {
-        setHighlightedCells(new Set());
-      }, 3000);
+        makeMove(hint.row, hint.col, hint.value, true);
+      }, hintNumberDelay);
       
-      toast.success('提示已填入', {
+      toast.success('正在展示解题思路...', {
         description: hint.reason
       });
     } else {
       toast.info('暂无可用提示');
     }
-  }, [currentGame, makeMove]);
+  }, [currentGame, makeMove, generateSequenceHighlightSteps, gameStarted]);
 
   const restartGame = useCallback(() => {
     if (!currentGame) return;
@@ -541,6 +626,8 @@ export function ChallengeMode({ onSwitchToSolver, gameToLoad }: ChallengeProps) 
                 onCellSelect={(row, col) => setSelectedCell({ row, col })}
                 selectedCell={selectedCell}
                 highlightedCells={highlightedCells}
+                sequenceHighlights={sequenceHighlights}
+                onSequenceHighlightsClear={clearSequenceHighlights}
                 onContinue={() => setIsPaused(false)}
                 isPaused={isPaused}
                 className="w-full max-w-lg"

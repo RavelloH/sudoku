@@ -44,3 +44,11 @@ export interface Hint {
   value: number;
   reason: string;
 }
+
+export interface HighlightStep {
+  row: number;
+  col: number;
+  value: number;
+  isHintCell?: boolean;
+  delay: number;
+}

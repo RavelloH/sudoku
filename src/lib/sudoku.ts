@@ -265,7 +265,8 @@ export class SudokuUtils {
               row,
               col,
               value: possibilities[0],
-              reason: `This is the only number that can go in this cell.`
+              // reason: `This is the only number that can go in this cell.`
+              reason: `该单元格唯一可能的数字是 ${possibilities[0]}。`
             };
           }
           
@@ -275,7 +276,8 @@ export class SudokuUtils {
               row,
               col,
               value: possibilities[0],
-              reason: `This cell has only ${possibilities.length} possibilities: ${possibilities.join(', ')}.`
+              // reason: `This cell has only ${possibilities.length} possibilities: ${possibilities.join(', ')}.`
+              reason: `该单元格有 ${possibilities.length} 个可能的数字：${possibilities.join('，')}。`
             };
           }
         }
