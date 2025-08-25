@@ -1,4 +1,4 @@
-import { SudokuGame, GameStats, Difficulty } from '@/types/sudoku';
+import { SudokuGame, GameStats, Difficulty, Move } from '@/types/sudoku';
 
 const STORAGE_KEYS = {
   GAMES: 'sudoku_games',
@@ -45,15 +45,7 @@ export class StorageUtils {
         return gameTime > latestTime ? game : latest;
       }, incompleteGames[0]);
       
-      return {
-        ...currentGame,
-        startTime: new Date(currentGame.startTime),
-        endTime: currentGame.endTime ? new Date(currentGame.endTime) : undefined,
-        moves: currentGame.moves.map((move: any) => ({
-          ...move,
-          timestamp: new Date(move.timestamp)
-        }))
-      };
+      return currentGame;
     } catch (error) {
       console.error('Failed to load current game:', error);
       return null;
@@ -67,12 +59,15 @@ export class StorageUtils {
       
       const games = JSON.parse(stored);
       return games
-        .map((game: any) => ({
+        .map((game: { startTime: string; endTime?: string; moves: Array<Move & { timestamp: string }> } & Record<string, unknown>) => ({
           ...game,
           startTime: new Date(game.startTime),
           endTime: game.endTime ? new Date(game.endTime) : undefined,
-          moves: game.moves.map((move: any) => ({
-            ...move,
+          moves: game.moves.map((move: Move & { timestamp: string }) => ({
+            row: move.row,
+            col: move.col,
+            value: move.value,
+            previousValue: move.previousValue,
             timestamp: new Date(move.timestamp)
           }))
         }))
@@ -89,12 +84,15 @@ export class StorageUtils {
       if (!stored) return [];
       
       const games = JSON.parse(stored);
-      return games.map((game: any) => ({
+      return games.map((game: { startTime: string; endTime?: string; moves: Array<Move & { timestamp: string }> } & Record<string, unknown>) => ({
         ...game,
         startTime: new Date(game.startTime),
         endTime: game.endTime ? new Date(game.endTime) : undefined,
-        moves: game.moves.map((move: any) => ({
-          ...move,
+        moves: game.moves.map((move: Move & { timestamp: string }) => ({
+          row: move.row,
+          col: move.col,
+          value: move.value,
+          previousValue: move.previousValue,
           timestamp: new Date(move.timestamp)
         }))
       }));

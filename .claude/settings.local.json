@@ -7,7 +7,11 @@
       "Bash(pnpm dev:*)",
       "Bash(PORT=3011 pnpm dev)",
       "Bash(PORT=3012 pnpm dev)",
-      "Bash(PORT=3013 pnpm dev)"
+      "Bash(PORT=3013 pnpm dev)",
+      "Bash(PORT=3014 pnpm dev)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:cache.ravelloh.top)",
+      "Bash(PORT=3019 pnpm dev)"
     ],
     "deny": [],
     "ask": []

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTheme } from 'next-themes';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -20,13 +20,17 @@ import {
   Sun, 
   Moon, 
   Monitor, 
-  User,
+  Cloud,
+  CloudOff,
   Github,
   Globe,
   Menu,
   X
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { CloudAuthModal } from '@/components/cloud-auth-modal';
+import { CloudStorageManager } from '@/lib/cloud-storage';
+import { Badge } from '@/components/ui/badge';
 
 interface HeaderProps {
   currentTab: string;
@@ -36,6 +40,18 @@ interface HeaderProps {
 export function Header({ currentTab, onTabChange }: HeaderProps) {
   const { theme, setTheme } = useTheme();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [showCloudAuthModal, setShowCloudAuthModal] = useState(false);
+  const [cloudStorage] = useState(() => CloudStorageManager.getInstance());
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  // 检查登录状态
+  useEffect(() => {
+    setIsLoggedIn(cloudStorage.isLoggedIn());
+  }, [cloudStorage]);
+
+  const handleCloudAuthSuccess = () => {
+    setIsLoggedIn(true);
+  };
 
   const tabs = [
     { value: 'challenge', label: '挑战' },
@@ -96,121 +112,157 @@ export function Header({ currentTab, onTabChange }: HeaderProps) {
   );
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/60 card-enhanced border-b-border/50">
-      <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-        {/* Logo and Title */}
-        <div className="flex items-center gap-4">
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="flex items-center gap-3"
-          >
-            <SudokuIcon />
-            <div className="hidden sm:block">
-              <h1 className="text-lg font-bold text-gradient">RavelloH&apos;s Sudoku</h1>
-              <p className="text-xs text-muted-foreground">精美的数独游戏</p>
-            </div>
-          </motion.div>
-        </div>
+    <>
+      <header className="sticky top-0 z-40 w-full border-b bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/60 card-enhanced border-b-border/50">
+        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+          {/* Logo and Title */}
+          <div className="flex items-center gap-4">
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="flex items-center gap-3"
+            >
+              <SudokuIcon />
+              <div className="hidden sm:block">
+                <h1 className="text-lg font-bold text-gradient">RavelloH&apos;s Sudoku</h1>
+                <p className="text-xs text-muted-foreground">精美的数独游戏</p>
+              </div>
+            </motion.div>
+          </div>
 
-        {/* Desktop Navigation */}
-        <div className="hidden md:block">
-          <Tabs value={currentTab} onValueChange={onTabChange}>
-            <TabsList className="grid w-full grid-cols-4 bg-muted/30 border border-border/50">
-              {tabs.map((tab) => (
-                <TabsTrigger 
-                  key={tab.value} 
-                  value={tab.value}
-                  className="text-sm font-medium data-[state=active]:bg-background data-[state=active]:shadow-sm"
-                >
-                  {tab.label}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
-        </div>
+          {/* Desktop Navigation */}
+          <div className="hidden md:block">
+            <Tabs value={currentTab} onValueChange={onTabChange}>
+              <TabsList className="grid w-full grid-cols-4 bg-muted/30 border border-border/50">
+                {tabs.map((tab) => (
+                  <TabsTrigger 
+                    key={tab.value} 
+                    value={tab.value}
+                    className="text-sm font-medium data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                  >
+                    {tab.label}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
+          </div>
 
-        {/* Desktop Right Side */}
-        <div className="hidden md:flex items-center gap-2">
-          <ExternalLinks />
-          <ThemeToggle />
-          <Button variant="ghost" size="sm" className="w-9 h-9 p-0 hover:bg-muted/50 transition-colors">
-            <User className="h-4 w-4" />
-            <span className="sr-only">登录</span>
-          </Button>
-        </div>
+          {/* Desktop Right Side */}
+          <div className="hidden md:flex items-center gap-2">
+            <ExternalLinks />
+            <ThemeToggle />
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="w-9 h-9 p-0 hover:bg-muted/50 transition-colors relative"
+              onClick={() => setShowCloudAuthModal(true)}
+            >
+              {isLoggedIn ? (
+                <>
+                  <Cloud className="h-4 w-4" />
+                </>
+              ) : (
+                <CloudOff className="h-4 w-4" />
+              )}
+              <span className="sr-only">云存档</span>
+            </Button>
+          </div>
 
-        {/* Mobile Menu */}
-        <div className="md:hidden flex items-center gap-2">
-          <ThemeToggle />
-          <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="sm" className="w-9 h-9 p-0">
-                <Menu className="h-4 w-4" />
-                <span className="sr-only">菜单</span>
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="right" className="w-[300px] sm:w-[400px]">
-              <div className="flex flex-col gap-4 mt-8">
-                {/* Mobile Navigation */}
-                <div className="space-y-2">
-                  <h3 className="text-lg font-semibold mb-4">导航</h3>
-                  {tabs.map((tab) => (
-                    <Button
-                      key={tab.value}
-                      variant={currentTab === tab.value ? "default" : "ghost"}
-                      className="w-full justify-start"
-                      onClick={() => {
-                        onTabChange(tab.value);
-                        setIsMobileMenuOpen(false);
-                      }}
-                    >
-                      {tab.label}
-                    </Button>
-                  ))}
-                </div>
-
-                {/* Mobile Links */}
-                <div className="pt-4 border-t">
-                  <h3 className="text-lg font-semibold mb-4">链接</h3>
+          {/* Mobile Menu */}
+          <div className="md:hidden flex items-center gap-2">
+            <ThemeToggle />
+            <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="sm" className="w-9 h-9 p-0">
+                  <Menu className="h-4 w-4" />
+                  <span className="sr-only">菜单</span>
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-[300px] sm:w-[400px]">
+                <div className="flex flex-col gap-4 mt-8">
+                  {/* Mobile Navigation */}
                   <div className="space-y-2">
-                    <Button variant="ghost" className="w-full justify-start" asChild>
-                      <a 
-                        href="https://ravelloh.top" 
-                        target="_blank" 
-                        rel="noopener noreferrer"
+                    <h3 className="text-lg font-semibold mb-4">导航</h3>
+                    {tabs.map((tab) => (
+                      <Button
+                        key={tab.value}
+                        variant={currentTab === tab.value ? "default" : "ghost"}
+                        className="w-full justify-start"
+                        onClick={() => {
+                          onTabChange(tab.value);
+                          setIsMobileMenuOpen(false);
+                        }}
                       >
-                        <Globe className="mr-2 h-4 w-4" />
-                        作者博客
-                      </a>
-                    </Button>
-                    <Button variant="ghost" className="w-full justify-start" asChild>
-                      <a 
-                        href="https://github.com/RavelloH/Sudoku" 
-                        target="_blank" 
-                        rel="noopener noreferrer"
+                        {tab.label}
+                      </Button>
+                    ))}
+                  </div>
+
+                  {/* Mobile Links */}
+                  <div className="pt-4 border-t">
+                    <h3 className="text-lg font-semibold mb-4">链接</h3>
+                    <div className="space-y-2">
+                      <Button variant="ghost" className="w-full justify-start" asChild>
+                        <a 
+                          href="https://ravelloh.top" 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                        >
+                          <Globe className="mr-2 h-4 w-4" />
+                          作者博客
+                        </a>
+                      </Button>
+                      <Button variant="ghost" className="w-full justify-start" asChild>
+                        <a 
+                          href="https://github.com/RavelloH/Sudoku" 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                        >
+                          <Github className="mr-2 h-4 w-4" />
+                          GitHub 仓库
+                        </a>
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        className="w-full justify-start"
+                        onClick={() => {
+                          setShowCloudAuthModal(true);
+                          setIsMobileMenuOpen(false);
+                        }}
                       >
-                        <Github className="mr-2 h-4 w-4" />
-                        GitHub 仓库
-                      </a>
-                    </Button>
-                    <Button variant="ghost" className="w-full justify-start">
-                      <User className="mr-2 h-4 w-4" />
-                      登录
-                    </Button>
+                        {isLoggedIn ? (
+                          <>
+                            <Cloud className="mr-2 h-4 w-4" />
+                            云存档
+                          </>
+                        ) : (
+                          <>
+                            <CloudOff className="mr-2 h-4 w-4" />
+                            登录云存档
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* App Info */}
+                  <div className="pt-4 border-t text-sm text-muted-foreground">
+                    <p>RavelloH&apos;s Sudoku</p>
+                    <p>sudoku.ravelloh.top</p>
                   </div>
                 </div>
-
-                {/* App Info */}
-                <div className="pt-4 border-t text-sm text-muted-foreground">
-                  <p>RavelloH&apos;s Sudoku</p>
-                  <p>sudoku.ravelloh.top</p>
-                </div>
-              </div>
-            </SheetContent>
-          </Sheet>
+              </SheetContent>
+            </Sheet>
+          </div>
         </div>
-      </div>
-    </header>
+      </header>
+
+      {/* 云存档认证模态窗口 */}
+      <CloudAuthModal 
+        isOpen={showCloudAuthModal} 
+        onClose={() => setShowCloudAuthModal(false)}
+        onLoginSuccess={handleCloudAuthSuccess}
+      />
+    </>
   );
 }

@@ -71,6 +71,7 @@ export function ChallengeMode({ onSwitchToSolver, gameToLoad }: ChallengeProps) 
   const [gameStarted, setGameStarted] = useState(false); // 是否已开始游戏（输入了第一个数字）
   const [highlightedCells, setHighlightedCells] = useState<Set<string>>(new Set());
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const gameLoadedRef = useRef(false); // 跟踪是否已经处理了 gameToLoad
 
   // 计时器逻辑
   useEffect(() => {
@@ -111,24 +112,70 @@ export function ChallengeMode({ onSwitchToSolver, gameToLoad }: ChallengeProps) 
     };
   }, [currentGame, gameStarted, isPaused]);
 
-  // 恢复已保存的游戏
+  // 恢复已保存的游戏或加载传入的游戏
   useEffect(() => {
-    const savedGame = StorageUtils.getCurrentGame();
-    if (savedGame && !savedGame.isCompleted) {
-      setCurrentGame(savedGame);
-      setCurrentMoveIndex(savedGame.moves.length - 1);
-      setSelectedDifficulty(savedGame.difficulty);
-      
-      // 恢复时使用保存的duration，而不是实时计算
-      // 这样可以避免暂停后刷新页面时间还在变化的问题
-      setElapsedTime(savedGame.duration || 0);
-      
-      setGameStarted(savedGame.moves.length > 0);
-      setIsPaused(true); // 恢复时默认暂停
-    } else {
-      startNewGame(selectedDifficulty);
+    // 如果已经处理了 gameToLoad，不再重复处理
+    if (gameLoadedRef.current) {
+      return;
     }
-  }, []);
+
+    // 优先处理传入的游戏（从历史记录页面点击继续/重开）
+    if (gameToLoad) {
+      setCurrentGame(gameToLoad);
+      setCurrentMoveIndex(gameToLoad.moves.length - 1);
+      setSelectedDifficulty(gameToLoad.difficulty);
+      
+      // 使用传入游戏的duration
+      setElapsedTime(gameToLoad.duration || 0);
+      
+      setGameStarted(gameToLoad.moves.length > 0);
+      setIsPaused(true); // 加载游戏时默认暂停
+      
+      // 如果是未完成的游戏，保存为当前游戏
+      if (!gameToLoad.isCompleted) {
+        StorageUtils.saveGame(gameToLoad);
+      }
+      
+      // 标记为已处理
+      gameLoadedRef.current = true;
+    } else {
+      // 如果没有传入游戏，尝试恢复已保存的游戏
+      const savedGame = StorageUtils.getCurrentGame();
+      if (savedGame && !savedGame.isCompleted) {
+        setCurrentGame(savedGame);
+        setCurrentMoveIndex(savedGame.moves.length - 1);
+        setSelectedDifficulty(savedGame.difficulty);
+        
+        // 恢复时使用保存的duration，而不是实时计算
+        // 这样可以避免暂停后刷新页面时间还在变化的问题
+        setElapsedTime(savedGame.duration || 0);
+        
+        setGameStarted(savedGame.moves.length > 0);
+        setIsPaused(true); // 恢复时默认暂停
+      } else {
+        // 直接在这里创建新游戏，避免循环引用
+        const { puzzle, solution } = SudokuUtils.generatePuzzle(selectedDifficulty);
+        const game: SudokuGame = {
+          id: `game_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          initialGrid: SudokuUtils.copyGrid(puzzle),
+          currentGrid: SudokuUtils.copyGrid(puzzle),
+          solutionGrid: solution,
+          difficulty: selectedDifficulty,
+          startTime: new Date(),
+          isCompleted: false,
+          moves: []
+        };
+        setCurrentGame(game);
+        setSelectedCell(null);
+        setIsPaused(false);
+        setCurrentMoveIndex(-1);
+        setElapsedTime(0);
+        setGameStarted(false);
+        setHighlightedCells(new Set());
+        StorageUtils.saveGame(game);
+      }
+    }
+  }, [gameToLoad, selectedDifficulty]);
 
   // 页面可见性变化时暂停/恢复计时
   useEffect(() => {

@@ -20,7 +20,7 @@ import { toast } from 'sonner';
 import { SudokuGridComponent } from '@/components/sudoku-grid';
 import { StorageUtils } from '@/lib/storage';
 import { SudokuUtils } from '@/lib/sudoku';
-import { SudokuGame, GameStats, Difficulty } from '@/types/sudoku';
+import { SudokuGame, GameStats, Difficulty, SudokuGrid } from '@/types/sudoku';
 import { 
   History, 
   Play, 
@@ -104,7 +104,7 @@ export function HistoryMode({ onSwitchToChallenge }: { onSwitchToChallenge?: (ga
     playMove(0);
   };
 
-  const getReplayGrid = (): any => {
+  const getReplayGrid = (): SudokuGrid => {
     if (!selectedGameForDisplay) return SudokuUtils.createEmptyGrid();
     
     const grid = SudokuUtils.copyGrid(selectedGameForDisplay.initialGrid);
