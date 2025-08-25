@@ -285,6 +285,31 @@ export function SudokuApp() {
       {currentTab === 'challenge' && (
         <section className="bg-muted/30 border-t border-border/50">
           <div className="container mx-auto px-4 py-12">
+            {/* 数独历史介绍 */}
+            <div className="text-center mb-12">
+              <h2 className="text-3xl font-bold mb-4">数独的世界</h2>
+              <p className="text-muted-foreground text-lg max-w-3xl mx-auto mb-6">
+                数独源自18世纪的瑞士数学家莱昂哈德·欧拉发明的&ldquo;拉丁方块&rdquo;，现代数独于1979年由美国建筑师霍华德·加恩斯发明，1984年在日本流行并得名&ldquo;数独&rdquo;（Sūdoku）
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+                <div className="text-center">
+                  <div className="text-2xl mb-2">🧮</div>
+                  <h3 className="font-semibold mb-1">数学逻辑</h3>
+                  <p className="text-sm text-muted-foreground">锻炼逻辑思维能力</p>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl mb-2">🎯</div>
+                  <h3 className="font-semibold mb-1">专注力</h3>
+                  <p className="text-sm text-muted-foreground">提升注意力和集中度</p>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl mb-2">🧠</div>
+                  <h3 className="font-semibold mb-1">记忆力</h3>
+                  <p className="text-sm text-muted-foreground">增强记忆和推理能力</p>
+                </div>
+              </div>
+            </div>
+
             <div className="text-center mb-10">
               <h2 className="text-3xl font-bold mb-4">数独规则与教程</h2>
               <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
@@ -449,6 +474,150 @@ export function SudokuApp() {
                     </div>
                     <p className="text-sm font-medium">65个空格</p>
                     <p className="text-xs text-muted-foreground">最高难度</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* 数独趣味知识 */}
+            <Card className="mt-8">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <span className="text-2xl">🎪</span>
+                  数独趣味知识
+                </CardTitle>
+                <CardDescription>了解一些有趣的数独小知识和世界纪录</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <h4 className="font-semibold text-lg text-primary">世界纪录</h4>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
+                        <div>
+                          <p className="font-medium">最快解题纪录</p>
+                          <p className="text-sm text-muted-foreground">Thomas Snyder（美国）</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-bold text-primary">1分23秒</p>
+                          <p className="text-xs text-muted-foreground">简单难度</p>
+                        </div>
+                      </div>
+                      <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
+                        <div>
+                          <p className="font-medium">世界锦标赛冠军</p>
+                          <p className="text-sm text-muted-foreground">2023年 - Kota Morinishi（日本）</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-bold text-primary">第12次夺冠</p>
+                          <p className="text-xs text-muted-foreground">日本领先</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <h4 className="font-semibold text-lg text-primary">有趣事实</h4>
+                    <div className="space-y-3">
+                      <div className="p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border-l-4 border-blue-400">
+                        <p className="font-medium text-sm">🔢 数学无关</p>
+                        <p className="text-xs text-muted-foreground">数独不需要数学计算，纯粹是逻辑推理游戏</p>
+                      </div>
+                      <div className="p-3 bg-green-50 dark:bg-green-950/20 rounded-lg border-l-4 border-green-400">
+                        <p className="font-medium text-sm">🎲 可能组合</p>
+                        <p className="text-xs text-muted-foreground">有效的数独谜题数量约为6.67×10²¹种</p>
+                      </div>
+                      <div className="p-3 bg-purple-50 dark:bg-purple-950/20 rounded-lg border-l-4 border-purple-400">
+                        <p className="font-medium text-sm">🌍 全球流行</p>
+                        <p className="text-xs text-muted-foreground">数独在全球有超过1亿爱好者</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* 数独变种介绍 */}
+            <Card className="mt-8">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <span className="text-2xl">🎲</span>
+                  数独变种
+                </CardTitle>
+                <CardDescription>除了经典数独，还有许多有趣的变种游戏</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="text-center p-4 bg-muted/30 rounded-lg">
+                    <div className="text-3xl mb-2">🔥</div>
+                    <h5 className="font-semibold text-sm mb-1">杀手数独</h5>
+                    <p className="text-xs text-muted-foreground">区域数字和固定</p>
+                  </div>
+                  <div className="text-center p-4 bg-muted/30 rounded-lg">
+                    <div className="text-3xl mb-2">🎯</div>
+                    <h5 className="font-semibold text-sm mb-1">对角线数独</h5>
+                    <p className="text-xs text-muted-foreground">对角线数字不重复</p>
+                  </div>
+                  <div className="text-center p-4 bg-muted/30 rounded-lg">
+                    <div className="text-3xl mb-2">🌈</div>
+                    <h5 className="font-semibold text-sm mb-1">不规则数独</h5>
+                    <p className="text-xs text-muted-foreground">不规则形状区域</p>
+                  </div>
+                  <div className="text-center p-4 bg-muted/30 rounded-lg">
+                    <div className="text-3xl mb-2">⚡</div>
+                    <h5 className="font-semibold text-sm mb-1">连续数独</h5>
+                    <p className="text-xs text-muted-foreground">相邻数字关系约束</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* 学习建议 */}
+            <Card className="mt-8">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <span className="text-2xl">📚</span>
+                  新手学习建议
+                </CardTitle>
+                <CardDescription>循序渐进地提升你的数独技能</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="text-center">
+                    <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <span className="text-2xl">🌱</span>
+                    </div>
+                    <h5 className="font-semibold mb-2">初级阶段</h5>
+                    <ul className="text-sm text-muted-foreground space-y-1 text-left">
+                      <li>• 从简单难度开始</li>
+                      <li>• 学习基本规则</li>
+                      <li>• 练习唯一可能法</li>
+                      <li>• 培养耐心和专注</li>
+                    </ul>
+                  </div>
+                  <div className="text-center">
+                    <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <span className="text-2xl">🌿</span>
+                    </div>
+                    <h5 className="font-semibold mb-2">中级阶段</h5>
+                    <ul className="text-sm text-muted-foreground space-y-1 text-left">
+                      <li>• 尝试中等难度</li>
+                      <li>• 学习排除法</li>
+                      <li>• 练习数对技巧</li>
+                      <li>• 提高解题速度</li>
+                    </ul>
+                  </div>
+                  <div className="text-center">
+                    <div className="w-16 h-16 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <span className="text-2xl">🌳</span>
+                    </div>
+                    <h5 className="font-semibold mb-2">高级阶段</h5>
+                    <ul className="text-sm text-muted-foreground space-y-1 text-left">
+                      <li>• 挑战困难以上</li>
+                      <li>• 掌握高级技巧</li>
+                      <li>• 尝试不同变种</li>
+                      <li>• 参加竞赛活动</li>
+                    </ul>
                   </div>
                 </div>
               </CardContent>
