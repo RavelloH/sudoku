@@ -72,7 +72,7 @@ export function GenerateMode() {
     { value: 'extreme', label: '极限', description: '数独大师级别' },
   ];
 
-  const puzzlesPerPageOptions = [1, 2, 4, 6, 8, 9, 12];
+  const puzzlesPerPageOptions = [1, 2, 4, 6];
 
   // 难度选择对话框状态管理
   useEffect(() => {
@@ -188,7 +188,6 @@ export function GenerateMode() {
             grid-template-rows: repeat(9, 30px);
             gap: 1px;
             border: 2px solid #000;
-            background-color: #000;
           }
           .cell {
             background-color: white;
@@ -210,37 +209,13 @@ export function GenerateMode() {
             font-size: 12px;
           }
           .puzzles-row {
-            display: grid;
+            display: flex;
+            flex-wrap: wrap;
             gap: 20px;
             justify-content: center;
             margin-bottom: 20px;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
           }
-          .puzzles-row.grid-1 {
-            grid-template-columns: 1fr;
-          }
-          .puzzles-row.grid-2 {
-            grid-template-columns: repeat(2, 1fr);
-          }
-          .puzzles-row.grid-3 {
-            grid-template-columns: repeat(3, 1fr);
-          }
-          .puzzles-row.grid-4 {
-            grid-template-columns: repeat(2, 1fr);
-          }
-          .puzzles-row.grid-6 {
-            grid-template-columns: repeat(3, 1fr);
-          }
-          .puzzles-row.grid-8 {
-            grid-template-columns: repeat(4, 1fr);
-          }
-          .puzzles-row.grid-9 {
-            grid-template-columns: repeat(3, 1fr);
-          }
-          .puzzles-row.grid-12 {
-            grid-template-columns: repeat(4, 1fr);
-          }
-          @media print {
+            @media print {
             .page-break {
               page-break-before: always;
             }
@@ -265,7 +240,7 @@ export function GenerateMode() {
         html += '<div class="page-break"></div>';
       }
       
-      html += `<div class="puzzles-row grid-${puzzlesPerPage}">`;
+      html += `<div class="puzzles-row">`;
       
       for (let j = i; j < Math.min(i + puzzlesPerPage, puzzles.length); j++) {
         const puzzle = puzzles[j];
