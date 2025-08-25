@@ -588,11 +588,11 @@ export function SudokuApp() {
                       <span className="text-2xl">🌱</span>
                     </div>
                     <h5 className="font-semibold mb-2">初级阶段</h5>
-                    <ul className="text-sm text-muted-foreground space-y-1 text-left">
-                      <li>• 从简单难度开始</li>
-                      <li>• 学习基本规则</li>
-                      <li>• 练习唯一可能法</li>
-                      <li>• 培养耐心和专注</li>
+                    <ul className="text-sm text-muted-foreground space-y-1 text-center">
+                      <li>从简单难度开始</li>
+                      <li>学习基本规则</li>
+                      <li>练习唯一可能法</li>
+                      <li>培养耐心和专注</li>
                     </ul>
                   </div>
                   <div className="text-center">
@@ -600,11 +600,11 @@ export function SudokuApp() {
                       <span className="text-2xl">🌿</span>
                     </div>
                     <h5 className="font-semibold mb-2">中级阶段</h5>
-                    <ul className="text-sm text-muted-foreground space-y-1 text-left">
-                      <li>• 尝试中等难度</li>
-                      <li>• 学习排除法</li>
-                      <li>• 练习数对技巧</li>
-                      <li>• 提高解题速度</li>
+                    <ul className="text-sm text-muted-foreground space-y-1 text-center">
+                      <li>尝试中等难度</li>
+                      <li>学习排除法</li>
+                      <li>练习数对技巧</li>
+                      <li>提高解题速度</li>
                     </ul>
                   </div>
                   <div className="text-center">
@@ -612,11 +612,11 @@ export function SudokuApp() {
                       <span className="text-2xl">🌳</span>
                     </div>
                     <h5 className="font-semibold mb-2">高级阶段</h5>
-                    <ul className="text-sm text-muted-foreground space-y-1 text-left">
-                      <li>• 挑战困难以上</li>
-                      <li>• 掌握高级技巧</li>
-                      <li>• 尝试不同变种</li>
-                      <li>• 参加竞赛活动</li>
+                    <ul className="text-sm text-muted-foreground space-y-1 text-center">
+                      <li>挑战困难以上</li>
+                      <li>掌握高级技巧</li>
+                      <li>尝试不同变种</li>
+                      <li>参加竞赛活动</li>
                     </ul>
                   </div>
                 </div>
