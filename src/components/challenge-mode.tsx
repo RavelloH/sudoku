@@ -341,6 +341,19 @@ export function ChallengeMode({ onSwitchToSolver, gameToLoad }: ChallengeProps) 
 
     const hint = SudokuUtils.getHint(currentGame.currentGrid);
     if (hint) {
+      // 如果游戏还没开始，提示数字应该开始计时
+      if (!gameStarted) {
+        setGameStarted(true);
+        setIsPaused(false);
+        // 更新开始时间并重新保存
+        const updatedGame = {
+          ...currentGame,
+          startTime: new Date()
+        };
+        StorageUtils.saveGame(updatedGame);
+        setCurrentGame(updatedGame);
+      }
+      
       // 填入提示数字
       makeMove(hint.row, hint.col, hint.value, true);
       

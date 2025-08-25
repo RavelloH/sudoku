@@ -18,6 +18,7 @@ export function SudokuApp() {
   const [challengeGame, setChallengeGame] = useState<SudokuGame | null>(null);
   const [cloudStorage] = useState(() => CloudStorageManager.getInstance());
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'success' | 'error'>('idle');
+  const [isCloudSyncComplete, setIsCloudSyncComplete] = useState(false);
 
   // Hash routing logic
   useEffect(() => {
@@ -60,35 +61,26 @@ export function SudokuApp() {
       toast.success('快速登录成功！');
     }
 
-    // 自动同步云存档
-    const autoSync = async () => {
+    // 页面加载时从云端获取数据，然后立即用本地数据覆盖云端
+    const syncWithCloud = async () => {
       if (!cloudStorage.isLoggedIn()) {
+        setIsCloudSyncComplete(true);
         return;
       }
 
       try {
         setSyncStatus('syncing');
         
-        // 获取本地所有数据
-        const allGames = StorageUtils.getAllGamesIncludingUnstarted();
-        const stats = StorageUtils.getStats();
-        const settings = StorageUtils.getSettings();
+        // 从云端下载数据（仅用于检查）
+        const result = await cloudStorage.checkCloudUpdates();
         
-        const localData = {
-          games: allGames,
-          stats: stats,
-          settings: settings,
-          lastSync: new Date().toISOString()
-        };
-
-        // 尝试自动同步
-        const result = await cloudStorage.autoSync(localData);
-        
-        if (result.success) {
-          // 如果下载了数据，恢复到本地
-          if (result.data && (result.data as { games?: unknown[] }).games) {
-            // 恢复游戏数据
-            (result.data as { games: unknown[] }).games.forEach((game: unknown) => {
+        if (result.success && result.data) {
+          // 恢复云端数据到本地
+          const cloudData = result.data as { games?: unknown[]; stats?: unknown; settings?: unknown };
+          
+          // 恢复游戏数据
+          if (cloudData.games) {
+            cloudData.games.forEach((game: unknown) => {
               const gameData = game as SudokuGame & { startTime: string; endTime?: string; moves: Array<{ timestamp: string } & Record<string, unknown>> };
               StorageUtils.saveGame({
                 ...gameData,
@@ -102,71 +94,132 @@ export function SudokuApp() {
             });
             
             // 恢复统计数据
-            if ((result.data as { stats?: unknown }).stats) {
-              localStorage.setItem('sudoku_stats', JSON.stringify((result.data as { stats: unknown }).stats));
+            if (cloudData.stats) {
+              localStorage.setItem('sudoku_stats', JSON.stringify(cloudData.stats));
             }
             
             // 恢复设置
-            if ((result.data as { settings?: unknown }).settings) {
-              localStorage.setItem('sudoku_settings', JSON.stringify((result.data as { settings: unknown }).settings));
+            if (cloudData.settings) {
+              localStorage.setItem('sudoku_settings', JSON.stringify(cloudData.settings));
             }
             
             setSyncStatus('success');
-            toast.success('云存档同步成功！');
+            toast.success('已从云端同步数据！');
+            
+            // 立即用本地数据覆盖云端
+            const allGames = StorageUtils.getAllGamesIncludingUnstarted();
+            const stats = StorageUtils.getStats();
+            const settings = StorageUtils.getSettings();
+            
+            const localData = {
+              games: allGames,
+              stats: stats,
+              settings: settings,
+              lastSync: new Date().toISOString()
+            };
+            
+            await cloudStorage.uploadLocalData(localData);
           } else {
             setSyncStatus('success');
           }
         } else {
           setSyncStatus('error');
-          console.error('Cloud sync failed:', result.message);
+          console.error('Cloud download failed:', result.message);
         }
       } catch (error) {
         setSyncStatus('error');
         console.error('Cloud sync error:', error);
+      } finally {
+        setIsCloudSyncComplete(true);
       }
     };
 
-    // 延迟执行同步，确保页面完全加载
-    const timer = setTimeout(autoSync, 2000);
+    // 立即执行同步，确保在页面内容加载前完成
+    const timer = setTimeout(syncWithCloud, 500);
     
     return () => clearTimeout(timer);
   }, [cloudStorage]);
 
-  // 监听本地存储变化，自动上传到云端
+  // 移除云端数据更新监听和心跳同步
+  // 现在只在页面加载时同步一次，然后本地变化立即上传到云端
+
+  // 监听本地存储变化，立即上传到云端
   useEffect(() => {
-    if (!cloudStorage.isLoggedIn()) {
+    if (!cloudStorage.isLoggedIn() || !isCloudSyncComplete) {
       return;
     }
 
-    const handleStorageChange = () => {
-      // 防抖：延迟执行上传
-      setTimeout(async () => {
-        try {
-          const allGames = StorageUtils.getAllGamesIncludingUnstarted();
-          const stats = StorageUtils.getStats();
-          const settings = StorageUtils.getSettings();
-          
-          const localData = {
-            games: allGames,
-            stats: stats,
-            settings: settings,
-            lastSync: new Date().toISOString()
-          };
+    // 上传本地数据到云端
+    const uploadLocalData = async () => {
+      try {
+        const allGames = StorageUtils.getAllGamesIncludingUnstarted();
+        const stats = StorageUtils.getStats();
+        const settings = StorageUtils.getSettings();
+        
+        const localData = {
+          games: allGames,
+          stats: stats,
+          settings: settings,
+          lastSync: new Date().toISOString()
+        };
 
-          await cloudStorage.uploadData(localData);
-        } catch (error) {
-          console.error('Auto upload failed:', error);
+        const result = await cloudStorage.uploadLocalData(localData);
+        if (result.success) {
+          console.log('Local data uploaded to cloud successfully');
         }
-      }, 1000);
+      } catch (error) {
+        console.error('Auto upload failed:', error);
+      }
     };
 
-    // 监听storage事件
+    // 监听storage事件（其他标签页的变化）
+    const handleStorageChange = (event: StorageEvent) => {
+      // 只监听我们关心的key
+      const watchedKeys = ['sudoku_games', 'sudoku_stats', 'sudoku_settings', 'sudoku_current_game'];
+      if (watchedKeys.includes(event.key || '')) {
+        // 立即上传，无延时
+        uploadLocalData();
+      }
+    };
+
+    // 重写localStorage方法以监听当前标签页的变化
+    const originalSetItem = localStorage.setItem;
+    const originalRemoveItem = localStorage.removeItem;
+
+    localStorage.setItem = function(key: string, value: string) {
+      originalSetItem.call(this, key, value);
+      
+      // 只监听我们关心的key
+      const watchedKeys = ['sudoku_games', 'sudoku_stats', 'sudoku_settings', 'sudoku_current_game'];
+      if (watchedKeys.includes(key)) {
+        // 立即上传，无延时
+        uploadLocalData();
+      }
+    };
+
+    localStorage.removeItem = function(key: string) {
+      originalRemoveItem.call(this, key);
+      
+      // 只监听我们关心的key
+      const watchedKeys = ['sudoku_games', 'sudoku_stats', 'sudoku_settings', 'sudoku_current_game'];
+      if (watchedKeys.includes(key)) {
+        // 立即上传，无延时
+        uploadLocalData();
+      }
+    };
+
+    // 监听storage事件（其他标签页的变化）
     window.addEventListener('storage', handleStorageChange);
     
     return () => {
+      // 清理监听器
       window.removeEventListener('storage', handleStorageChange);
+      
+      // 恢复原始方法
+      localStorage.setItem = originalSetItem;
+      localStorage.removeItem = originalRemoveItem;
     };
-  }, [cloudStorage]);
+  }, [cloudStorage, isCloudSyncComplete]);
 
   const handleTabChange = (tab: string) => {
     // Clear solver initial grid when switching to solver mode directly
@@ -193,6 +246,18 @@ export function SudokuApp() {
   };
 
   const renderContent = () => {
+    // 如果云同步未完成且已登录，显示加载状态
+    if (!isCloudSyncComplete && cloudStorage.isLoggedIn()) {
+      return (
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">正在同步云存档...</p>
+          </div>
+        </div>
+      );
+    }
+
     switch (currentTab) {
       case 'challenge':
         return <ChallengeMode onSwitchToSolver={handleSwitchToSolver} gameToLoad={challengeGame} />;
@@ -219,16 +284,16 @@ export function SudokuApp() {
         <div className="container mx-auto px-4 py-8">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="text-sm text-muted-foreground text-center md:text-left">
-              <p className="font-medium">© 2024 RavelloH&apos;s Sudoku. 精美的数独游戏体验。</p>
+              <p className="font-medium">© 2025 RavelloH&apos;s Sudoku. 精美的数独游戏体验。</p>
               <p className="mt-2 flex items-center justify-center md:justify-start gap-1">
                 访问{' '}
                 <a 
-                  href="https://sudoku.ravelloh.top" 
+                  href="https://ravelloh.top" 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="text-primary hover:underline"
                 >
-                  sudoku.ravelloh.top
+                  ravelloh.top
                 </a>
                 {' '}了解更多
               </p>

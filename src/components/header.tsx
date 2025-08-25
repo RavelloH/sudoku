@@ -27,7 +27,8 @@ import {
   Menu,
   X
 } from 'lucide-react';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { VisuallyHidden } from '@/components/ui/visually-hidden';
 import { CloudAuthModal } from '@/components/cloud-auth-modal';
 import { CloudStorageManager } from '@/lib/cloud-storage';
 import { Badge } from '@/components/ui/badge';
@@ -123,9 +124,9 @@ export function Header({ currentTab, onTabChange }: HeaderProps) {
               className="flex items-center gap-3"
             >
               <SudokuIcon />
-              <div className="hidden sm:block">
+              <div>
                 <h1 className="text-lg font-bold text-gradient">RavelloH&apos;s Sudoku</h1>
-                <p className="text-xs text-muted-foreground">精美的数独游戏</p>
+                <p className="hidden sm:block text-xs text-muted-foreground">关于数独的一切</p>
               </div>
             </motion.div>
           </div>
@@ -151,6 +152,7 @@ export function Header({ currentTab, onTabChange }: HeaderProps) {
           <div className="hidden md:flex items-center gap-2">
             <ExternalLinks />
             <ThemeToggle />
+            
             <Button 
               variant="ghost" 
               size="sm" 
@@ -178,16 +180,22 @@ export function Header({ currentTab, onTabChange }: HeaderProps) {
                   <span className="sr-only">菜单</span>
                 </Button>
               </SheetTrigger>
-              <SheetContent side="right" className="w-[300px] sm:w-[400px]">
-                <div className="flex flex-col gap-4 mt-8">
+              <SheetContent side="right" className="w-[300px] sm:w-[400px] px-6 py-6">
+                <SheetHeader>
+                  <VisuallyHidden>
+                    <SheetTitle>菜单</SheetTitle>
+                  </VisuallyHidden>
+                </SheetHeader>
+                <div className="flex flex-col gap-8">
                   {/* Mobile Navigation */}
-                  <div className="space-y-2">
-                    <h3 className="text-lg font-semibold mb-4">导航</h3>
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold">导航</h3>
+                    <div className="space-y-3">
                     {tabs.map((tab) => (
                       <Button
                         key={tab.value}
                         variant={currentTab === tab.value ? "default" : "ghost"}
-                        className="w-full justify-start"
+                        className="w-full justify-start h-10"
                         onClick={() => {
                           onTabChange(tab.value);
                           setIsMobileMenuOpen(false);
@@ -196,13 +204,14 @@ export function Header({ currentTab, onTabChange }: HeaderProps) {
                         {tab.label}
                       </Button>
                     ))}
+                    </div>
                   </div>
 
                   {/* Mobile Links */}
                   <div className="pt-4 border-t">
                     <h3 className="text-lg font-semibold mb-4">链接</h3>
-                    <div className="space-y-2">
-                      <Button variant="ghost" className="w-full justify-start" asChild>
+                    <div className="space-y-3">
+                      <Button variant="ghost" className="w-full justify-start h-10" asChild>
                         <a 
                           href="https://ravelloh.top" 
                           target="_blank" 
@@ -212,7 +221,7 @@ export function Header({ currentTab, onTabChange }: HeaderProps) {
                           作者博客
                         </a>
                       </Button>
-                      <Button variant="ghost" className="w-full justify-start" asChild>
+                      <Button variant="ghost" className="w-full justify-start h-10" asChild>
                         <a 
                           href="https://github.com/RavelloH/Sudoku" 
                           target="_blank" 
@@ -224,7 +233,7 @@ export function Header({ currentTab, onTabChange }: HeaderProps) {
                       </Button>
                       <Button 
                         variant="ghost" 
-                        className="w-full justify-start"
+                        className="w-full justify-start h-10"
                         onClick={() => {
                           setShowCloudAuthModal(true);
                           setIsMobileMenuOpen(false);
@@ -243,12 +252,6 @@ export function Header({ currentTab, onTabChange }: HeaderProps) {
                         )}
                       </Button>
                     </div>
-                  </div>
-
-                  {/* App Info */}
-                  <div className="pt-4 border-t text-sm text-muted-foreground">
-                    <p>RavelloH&apos;s Sudoku</p>
-                    <p>sudoku.ravelloh.top</p>
                   </div>
                 </div>
               </SheetContent>

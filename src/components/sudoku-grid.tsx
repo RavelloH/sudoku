@@ -211,7 +211,7 @@ export function SudokuGridComponent({
   };
 
   const handleCellClick = (row: number, col: number, e: React.MouseEvent) => {
-    if (readOnly || isInitialCell(row, col) || isPaused) return;
+    if (readOnly || isInitialCell(row, col) || isAutoSolvedCell(row, col) || isPaused) return;
 
     onCellSelect?.(row, col);
 
@@ -263,12 +263,21 @@ export function SudokuGridComponent({
     const isConflict = isConflictCell(row, col);
     const conflictType = getConflictType(row, col);
     const isHighlightedCell = isHighlighted(row, col);
+    const isInitial = isInitialCell(row, col);
+    const isAutoSolved = isAutoSolvedCell(row, col);
     
     if (isSelected) return 'bg-primary/20';
-    if (isConflict && conflictType === 'row') return 'bg-yellow-200/60 dark:bg-yellow-800/30';
-    if (isConflict && conflictType === 'column') return 'bg-yellow-200/60 dark:bg-yellow-800/30';
-    if (isConflict && conflictType === 'box') return 'bg-yellow-200/60 dark:bg-yellow-800/30';
-    if (isConflict) return 'bg-yellow-100/80 dark:bg-yellow-900/40';
+    if (isConflict) {
+      // 所有冲突的数字都显示黄色背景（包括初始数字）
+      if (conflictType === 'row') return 'bg-yellow-200/60 dark:bg-yellow-800/30';
+      if (conflictType === 'column') return 'bg-yellow-200/60 dark:bg-yellow-800/30';
+      if (conflictType === 'box') return 'bg-yellow-200/60 dark:bg-yellow-800/30';
+      return 'bg-yellow-100/80 dark:bg-yellow-900/40';
+    }
+    if (isAutoSolved) {
+      // 自动推导的数字显示黄色背景
+      return 'bg-yellow-100/60 dark:bg-yellow-900/30';
+    }
     if (isHighlightedCell) return 'bg-green-100/60 dark:bg-green-900/30';
     
     return 'bg-background hover:bg-muted/30';
@@ -281,6 +290,11 @@ export function SudokuGridComponent({
     const isInitial = isInitialCell(row, col);
     const isAutoSolved = isAutoSolvedCell(row, col);
     const isConflict = isConflictCell(row, col);
+    
+    // 调试日志
+    if (cell && isAutoSolved) {
+      console.log(`Cell ${row}-${col}: ${cell} is auto-solved`);
+    }
     
     // 计算边框样式
     const isRightThick = (col + 1) % 3 === 0 && col < 8;
@@ -296,12 +310,12 @@ export function SudokuGridComponent({
           isBottomThick && "border-b-2 border-b-border",
           getCellBackground(row, col),
           isSelected && "ring-2 ring-primary ring-inset z-20",
-          !readOnly && !isInitial && !isPaused && "cursor-pointer",
-          (readOnly || isInitial || isPaused) && "cursor-default"
+          !readOnly && !isInitial && !isAutoSolved && !isPaused && "cursor-pointer",
+          (readOnly || isInitial || isAutoSolved || isPaused) && "cursor-default"
         )}
         onClick={(e) => handleCellClick(row, col, e)}
         onMouseDown={(e) => {
-          if (isMobile && !isPaused) {
+          if (isMobile && !isPaused && !isAutoSolvedCell(row, col)) {
             const timer = setTimeout(() => {
               handleCellLongPress(row, col, e);
             }, 500);
@@ -315,7 +329,7 @@ export function SudokuGridComponent({
           }
         }}
         onTouchStart={(e) => {
-          if (!isPaused) {
+          if (!isPaused && !isAutoSolvedCell(row, col)) {
             const timer = setTimeout(() => {
               handleCellLongPress(row, col, e);
             }, 500);
@@ -329,10 +343,10 @@ export function SudokuGridComponent({
           }
         }}
         onKeyDown={(e) => handleKeyDown(e, row, col)}
-        tabIndex={readOnly || isInitial || isPaused ? -1 : 0}
-        disabled={readOnly || isInitial || isPaused}
-        whileHover={!readOnly && !isInitial && !isPaused ? { scale: 1.02 } : {}}
-        whileTap={!readOnly && !isInitial && !isPaused ? { scale: 0.98 } : {}}
+        tabIndex={readOnly || isInitial || isAutoSolved || isPaused ? -1 : 0}
+        disabled={readOnly || isInitial || isAutoSolved || isPaused}
+        whileHover={!readOnly && !isInitial && !isAutoSolved && !isPaused ? { scale: 1.02 } : {}}
+        whileTap={!readOnly && !isInitial && !isAutoSolved && !isPaused ? { scale: 0.98 } : {}}
       >
         <AnimatePresence mode="wait">
           {cell && (
@@ -350,8 +364,8 @@ export function SudokuGridComponent({
                 "font-semibold",
                 isInitial && "text-foreground",
                 !isInitial && !isAutoSolved && "text-primary",
-                isAutoSolved && "text-muted-foreground",
-                isConflict && "text-yellow-600 dark:text-yellow-400"
+                isAutoSolved && "text-muted-foreground/60", // 暗灰色，更透明
+                isConflict && !isInitial && "text-yellow-600 dark:text-yellow-400" // 只有用户输入的冲突数字才变色
               )}
             >
               {cell}
