@@ -1,11 +1,15 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { SudokuGrid, SudokuCell, Conflict, HighlightStep } from '@/types/sudoku';
 import { Button } from '@/components/ui/button';
 import { Trash2, Play } from 'lucide-react';
+
+export interface SudokuGridRef {
+  clearHighlights: () => void;
+}
 
 interface SudokuGridComponentProps {
   grid: SudokuGrid;
@@ -157,7 +161,7 @@ function NumberWheel({ onSelect, onClose, position, currentValue }: NumberWheelP
   );
 }
 
-export function SudokuGridComponent({
+export const SudokuGridComponent = forwardRef<SudokuGridRef, SudokuGridComponentProps>(({
   grid,
   initialGrid,
   conflicts,
@@ -172,7 +176,7 @@ export function SudokuGridComponent({
   className,
   isPaused = false,
   onContinue
-}: SudokuGridComponentProps) {
+}, ref) => {
   const [showWheel, setShowWheel] = useState(false);
   const [wheelPosition, setWheelPosition] = useState({ x: 0, y: 0 });
   const [wheelCell, setWheelCell] = useState<{ row: number; col: number } | null>(null);
@@ -180,6 +184,26 @@ export function SudokuGridComponent({
   const [currentSequenceHighlight, setCurrentSequenceHighlight] = useState<Set<string>>(new Set());
   const [hintHighlightIntensity, setHintHighlightIntensity] = useState<number>(0);
   const [currentActiveStep, setCurrentActiveStep] = useState<HighlightStep | null>(null);
+  const activeTimersRef = useRef<NodeJS.Timeout[]>([]);
+
+  // 暴露清除高亮的方法给父组件
+  useImperativeHandle(ref, () => ({
+    clearHighlights: () => {
+      // 立即清除所有定时器
+      activeTimersRef.current.forEach(timer => clearTimeout(timer));
+      activeTimersRef.current = [];
+      
+      // 立即清除所有状态
+      setCurrentSequenceHighlight(new Set());
+      setHintHighlightIntensity(0);
+      setCurrentActiveStep(null);
+      
+      // 通知父组件清除序列高亮数据
+      if (onSequenceHighlightsClear) {
+        onSequenceHighlightsClear();
+      }
+    }
+  }), [onSequenceHighlightsClear]);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -194,6 +218,10 @@ export function SudokuGridComponent({
 
   // 处理序列高亮
   useEffect(() => {
+    // 清除之前的定时器
+    activeTimersRef.current.forEach(timer => clearTimeout(timer));
+    activeTimersRef.current = [];
+
     if (sequenceHighlights.length === 0) {
       setCurrentSequenceHighlight(new Set());
       setHintHighlightIntensity(0);
@@ -202,7 +230,6 @@ export function SudokuGridComponent({
     }
 
     const highlightSet = new Set<string>();
-    const removalTimers: NodeJS.Timeout[] = [];
     
     // 找到最长的延迟时间（最后一个步骤的延迟时间）
     const maxDelay = Math.max(...sequenceHighlights.map(step => step.delay));
@@ -226,7 +253,7 @@ export function SudokuGridComponent({
         }
       }, step.delay);
       
-      removalTimers.push(startTimer);
+      activeTimersRef.current.push(startTimer);
     });
     
     // 设置统一的清除时间（所有高亮完成后2秒清除所有）
@@ -241,11 +268,12 @@ export function SudokuGridComponent({
       }
     }, maxDelay + 2000); // 额外2秒让用户看清所有高亮
     
-    removalTimers.push(clearTimer);
+    activeTimersRef.current.push(clearTimer);
     
     // 清理定时器
     return () => {
-      removalTimers.forEach(timer => clearTimeout(timer));
+      activeTimersRef.current.forEach(timer => clearTimeout(timer));
+      activeTimersRef.current = [];
     };
   }, [sequenceHighlights, onSequenceHighlightsClear]);
 
@@ -524,4 +552,6 @@ export function SudokuGridComponent({
       </AnimatePresence>
     </div>
   );
-}
+});
+
+SudokuGridComponent.displayName = 'SudokuGridComponent';

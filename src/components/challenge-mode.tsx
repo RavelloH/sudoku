@@ -26,7 +26,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { SudokuGridComponent } from '@/components/sudoku-grid';
+import { SudokuGridComponent, SudokuGridRef } from '@/components/sudoku-grid';
 import { SudokuUtils } from '@/lib/sudoku';
 import { StorageUtils } from '@/lib/storage';
 import { 
@@ -70,14 +70,23 @@ export function ChallengeMode({ onSwitchToSolver, gameToLoad }: ChallengeProps) 
   const [tempSelectedDifficulty, setTempSelectedDifficulty] = useState<Difficulty | null>(null);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [gameStarted, setGameStarted] = useState(false); // 是否已开始游戏（输入了第一个数字）
+  const [isTimerActive, setIsTimerActive] = useState(false); // 计时器是否应该运行
   const [highlightedCells, setHighlightedCells] = useState<Set<string>>(new Set());
   const [sequenceHighlights, setSequenceHighlights] = useState<HighlightStep[]>([]);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const gameLoadedRef = useRef(false); // 跟踪是否已经处理了 gameToLoad
+  const sudokuGridRef = useRef<SudokuGridRef>(null);
+  const pendingHintRef = useRef<{row: number, col: number, value: number} | null>(null);
 
-  // 计时器逻辑
+  // 计时器状态同步
   useEffect(() => {
-    if (currentGame && gameStarted && !isPaused && !currentGame.isCompleted) {
+    const shouldTimerRun = currentGame && gameStarted && !isPaused && !currentGame.isCompleted;
+    setIsTimerActive(shouldTimerRun);
+  }, [currentGame?.isCompleted, gameStarted, isPaused, !!currentGame]);
+
+  // 简化的计时器逻辑
+  useEffect(() => {
+    if (isTimerActive) {
       intervalRef.current = setInterval(() => {
         setElapsedTime(prev => prev + 1);
       }, 1000);
@@ -91,9 +100,10 @@ export function ChallengeMode({ onSwitchToSolver, gameToLoad }: ChallengeProps) 
     return () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
+        intervalRef.current = null;
       }
     };
-  }, [currentGame, gameStarted, isPaused, currentGame?.isCompleted]);
+  }, [isTimerActive]);
 
   // 页面关闭前提示和自动暂停
   useEffect(() => {
@@ -205,6 +215,9 @@ export function ChallengeMode({ onSwitchToSolver, gameToLoad }: ChallengeProps) 
   };
 
   const startNewGame = useCallback((difficulty: Difficulty) => {
+    // 清除待填入的提示
+    pendingHintRef.current = null;
+    
     const { puzzle, solution } = SudokuUtils.generatePuzzle(difficulty);
     
     const game: SudokuGame = {
@@ -446,6 +459,16 @@ export function ChallengeMode({ onSwitchToSolver, gameToLoad }: ChallengeProps) 
   const getHint = useCallback(() => {
     if (!currentGame || currentGame.isCompleted) return;
 
+    // 先强制清除正在进行的动画
+    sudokuGridRef.current?.clearHighlights();
+
+    // 如果有待填入的提示数字，先填入
+    if (pendingHintRef.current) {
+      const pending = pendingHintRef.current;
+      makeMove(pending.row, pending.col, pending.value, true);
+      pendingHintRef.current = null;
+    }
+
     const hint = SudokuUtils.getHint(currentGame.currentGrid);
     if (hint) {
       
@@ -468,14 +491,26 @@ export function ChallengeMode({ onSwitchToSolver, gameToLoad }: ChallengeProps) 
       // 设置序列高亮（不立即填入数字）
       setSequenceHighlights(steps);
       
+      // 保存待填入的提示数字，等到第三阶段或下次提示时填入
+      pendingHintRef.current = {
+        row: hint.row,
+        col: hint.col,
+        value: hint.value
+      };
+      
       // 计算第三阶段的延迟时间（蓝色数字出现时）
       const hintNumberDelay = steps.find(step => 
         step.isHintCell && step.value !== null
       )?.delay || 0;
       
-      // 在蓝色数字出现时填入真实数字
+      // 在蓝色数字出现时填入真实数字（如果没有被新提示中断）
       setTimeout(() => {
-        makeMove(hint.row, hint.col, hint.value, true);
+        if (pendingHintRef.current && 
+            pendingHintRef.current.row === hint.row && 
+            pendingHintRef.current.col === hint.col) {
+          makeMove(hint.row, hint.col, hint.value, true);
+          pendingHintRef.current = null;
+        }
       }, hintNumberDelay);
       
       toast.success('正在展示解题思路...', {
@@ -488,6 +523,9 @@ export function ChallengeMode({ onSwitchToSolver, gameToLoad }: ChallengeProps) 
 
   const restartGame = useCallback(() => {
     if (!currentGame) return;
+
+    // 清除待填入的提示
+    pendingHintRef.current = null;
 
     const restartedGame: SudokuGame = {
       ...currentGame,
@@ -619,6 +657,7 @@ export function ChallengeMode({ onSwitchToSolver, gameToLoad }: ChallengeProps) 
           <CardContent>
             <div className="flex justify-center">
               <SudokuGridComponent
+                ref={sudokuGridRef}
                 grid={currentGame.currentGrid}
                 initialGrid={currentGame.initialGrid}
                 conflicts={conflicts}
