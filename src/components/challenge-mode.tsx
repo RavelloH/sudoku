@@ -393,7 +393,7 @@ export function ChallengeMode({ onSwitchToSolver, gameToLoad }: ChallengeProps) 
         setHighlightedCells(new Set());
       }, 3000);
       
-      toast.success('💡 提示已填入', {
+      toast.success('提示已填入', {
         description: hint.reason
       });
     } else {
@@ -550,7 +550,7 @@ export function ChallengeMode({ onSwitchToSolver, gameToLoad }: ChallengeProps) 
         </Card>
 
         {/* 控制面板区域 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* 游戏状态 */}
           <Card>
             <CardHeader className="pb-3">
@@ -588,7 +588,7 @@ export function ChallengeMode({ onSwitchToSolver, gameToLoad }: ChallengeProps) 
               </div>
               {!gameStarted && (
                 <div className="text-sm text-muted-foreground">
-                  💡 输入第一个数字开始计时
+                  输入第一个数字开始计时
                 </div>
               )}
             </CardContent>

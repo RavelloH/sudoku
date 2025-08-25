@@ -263,7 +263,6 @@ export function SudokuGridComponent({
     const isConflict = isConflictCell(row, col);
     const conflictType = getConflictType(row, col);
     const isHighlightedCell = isHighlighted(row, col);
-    const isInitial = isInitialCell(row, col);
     const isAutoSolved = isAutoSolvedCell(row, col);
     
     if (isSelected) return 'bg-primary/20';
@@ -275,8 +274,8 @@ export function SudokuGridComponent({
       return 'bg-yellow-100/80 dark:bg-yellow-900/40';
     }
     if (isAutoSolved) {
-      // 自动推导的数字显示黄色背景
-      return 'bg-yellow-100/60 dark:bg-yellow-900/30';
+      // 自动推导的数字不显示特殊背景色
+      return 'bg-background hover:bg-muted/30';
     }
     if (isHighlightedCell) return 'bg-green-100/60 dark:bg-green-900/30';
     
@@ -291,11 +290,7 @@ export function SudokuGridComponent({
     const isAutoSolved = isAutoSolvedCell(row, col);
     const isConflict = isConflictCell(row, col);
     
-    // 调试日志
-    if (cell && isAutoSolved) {
-      console.log(`Cell ${row}-${col}: ${cell} is auto-solved`);
-    }
-    
+      
     // 计算边框样式
     const isRightThick = (col + 1) % 3 === 0 && col < 8;
     const isBottomThick = (row + 1) % 3 === 0 && row < 8;
@@ -363,8 +358,8 @@ export function SudokuGridComponent({
               className={cn(
                 "font-semibold",
                 isInitial && "text-foreground",
+                isAutoSolved && "text-gray-500", // 暗灰色，更透明
                 !isInitial && !isAutoSolved && "text-primary",
-                isAutoSolved && "text-muted-foreground/60", // 暗灰色，更透明
                 isConflict && !isInitial && "text-yellow-600 dark:text-yellow-400" // 只有用户输入的冲突数字才变色
               )}
             >

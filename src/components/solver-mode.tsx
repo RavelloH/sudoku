@@ -47,9 +47,19 @@ export function SolverMode({ initialGrid }: SolverModeProps) {
   }, [initialGrid]);
 
   const updateAutoSolvedCells = useCallback(() => {
-    const newAutoSolved = new Set<string>();
     const workingGrid = SudokuUtils.copyGrid(userGrid);
+    const newAutoSolved = new Set<string>();
     let changed = false;
+
+    // 首先标记所有当前非空的单元格为用户输入（这样它们就不会被重新分类为自动推导）
+    const userCells = new Set<string>();
+    for (let row = 0; row < 9; row++) {
+      for (let col = 0; col < 9; col++) {
+        if (workingGrid[row][col] !== null && !autoSolvedCells.has(`${row}-${col}`)) {
+          userCells.add(`${row}-${col}`);
+        }
+      }
+    }
 
     // 持续寻找可以确定的单元格，直到没有新的可确定的为止
     let foundNewInThisIteration = true;
@@ -69,18 +79,28 @@ export function SolverMode({ initialGrid }: SolverModeProps) {
             // 如果只有一种可能性，自动填入
             if (possibilities.length === 1) {
               const key = `${row}-${col}`;
-              newAutoSolved.add(key);
-              workingGrid[row][col] = possibilities[0];
-              foundNewInThisIteration = true;
-              changed = true;
+              // 只有不是用户输入的单元格才能被标记为自动推导
+              if (!userCells.has(key)) {
+                newAutoSolved.add(key);
+                workingGrid[row][col] = possibilities[0];
+                foundNewInThisIteration = true;
+                changed = true;
+              }
             }
           }
         }
       }
     }
 
+    // 保留之前已经标记为自动推导的单元格
+    autoSolvedCells.forEach(key => {
+      if (!userCells.has(key)) {
+        newAutoSolved.add(key);
+      }
+    });
+
     if (changed || newAutoSolved.size !== autoSolvedCells.size) {
-      setAutoSolvedCells(newAutoSolved);
+            setAutoSolvedCells(newAutoSolved);
       
       if (changed) {
         setUserGrid(workingGrid);

@@ -17,6 +17,7 @@ export class CloudStorageManager {
   private lastUploadTime = 0;
   private readonly UPLOAD_COOLDOWN = 1000; // 1秒防抖
   private syncInProgress = false;
+  private lastCloudDataHash = '';
 
   private constructor() {
     // 只在客户端从localStorage加载认证信息

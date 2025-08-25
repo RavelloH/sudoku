@@ -7,6 +7,7 @@ import { ChallengeMode } from '@/components/challenge-mode';
 import { GenerateMode } from '@/components/generate-mode';
 import { SolverMode } from '@/components/solver-mode';
 import { HistoryMode } from '@/components/history-mode';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { SudokuGrid, SudokuGame } from '@/types/sudoku';
 import { CloudStorageManager } from '@/lib/cloud-storage';
 import { StorageUtils } from '@/lib/storage';
@@ -279,6 +280,182 @@ export function SudokuApp() {
       <main className="container mx-auto px-4 py-8">
         {renderContent()}
       </main>
+
+      {/* 数独规则和教程 */}
+      {currentTab === 'challenge' && (
+        <section className="bg-muted/30 border-t border-border/50">
+          <div className="container mx-auto px-4 py-12">
+            <div className="text-center mb-10">
+              <h2 className="text-3xl font-bold mb-4">数独规则与教程</h2>
+              <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+                数独是一种逻辑性的数字填充游戏，简单易学但富有挑战性
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {/* 基本规则 */}
+              <Card className="h-fit">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <span className="w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-bold">1</span>
+                    基本规则
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-3">
+                    <div className="flex items-start gap-3">
+                      <div className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0"></div>
+                      <p className="text-sm">游戏在 9×9 的网格中进行，分为 9 个 3×3 的小宫格</p>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0"></div>
+                      <p className="text-sm">每个空格需要填入 1-9 的数字</p>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0"></div>
+                      <p className="text-sm">每行必须包含 1-9 的所有数字，不能重复</p>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0"></div>
+                      <p className="text-sm">每列必须包含 1-9 的所有数字，不能重复</p>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0"></div>
+                      <p className="text-sm">每个 3×3 宫格必须包含 1-9 的所有数字，不能重复</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* 游戏技巧 */}
+              <Card className="h-fit">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <span className="w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-bold">2</span>
+                    解题技巧
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-3">
+                    <div className="border-l-4 border-primary/20 pl-4">
+                      <h4 className="font-semibold text-sm mb-1">唯一可能法</h4>
+                      <p className="text-sm text-muted-foreground">如果某个空格只有一种可能的数字，直接填入</p>
+                    </div>
+                    <div className="border-l-4 border-primary/20 pl-4">
+                      <h4 className="font-semibold text-sm mb-1">排除法</h4>
+                      <p className="text-sm text-muted-foreground">通过排除行、列、宫格中已存在的数字来确定唯一解</p>
+                    </div>
+                    <div className="border-l-4 border-primary/20 pl-4">
+                      <h4 className="font-semibold text-sm mb-1">数对法</h4>
+                      <p className="text-sm text-muted-foreground">寻找两个空格只能填入相同两个数字的情况</p>
+                    </div>
+                    <div className="border-l-4 border-primary/20 pl-4">
+                      <h4 className="font-semibold text-sm mb-1">区块排除</h4>
+                      <p className="text-sm text-muted-foreground">利用宫格之间的关系排除不可能的选项</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* 操作说明 */}
+              <Card className="h-fit">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <span className="w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-bold">3</span>
+                    操作说明
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-muted rounded flex items-center justify-center text-xs font-mono">1-9</div>
+                      <div>
+                        <p className="text-sm font-medium">数字输入</p>
+                        <p className="text-xs text-muted-foreground">点击空格后按键盘数字键填入</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-muted rounded flex items-center justify-center text-xs">⌫</div>
+                      <div>
+                        <p className="text-sm font-medium">删除数字</p>
+                        <p className="text-xs text-muted-foreground">按 Backspace 或 Delete 键删除</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-yellow-100 dark:bg-yellow-900/30 rounded flex items-center justify-center text-xs">!</div>
+                      <div>
+                        <p className="text-sm font-medium">冲突提示</p>
+                        <p className="text-xs text-muted-foreground">黄色背景表示数字冲突</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-green-100 dark:bg-green-900/30 rounded flex items-center justify-center text-xs">💡</div>
+                      <div>
+                        <p className="text-sm font-medium">提示功能</p>
+                        <p className="text-xs text-muted-foreground">绿色高亮显示提示相关格子</p>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* 难度说明 */}
+            <Card className="mt-8">
+              <CardHeader>
+                <CardTitle>难度级别</CardTitle>
+                <CardDescription>选择适合你的难度级别，从简单到极限逐步提升</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                  <div className="text-center">
+                    <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center mx-auto mb-2">
+                      <span className="text-green-600 dark:text-green-400 font-bold">简单</span>
+                    </div>
+                    <p className="text-sm font-medium">35个空格</p>
+                    <p className="text-xs text-muted-foreground">适合新手</p>
+                  </div>
+                  <div className="text-center">
+                    <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center mx-auto mb-2">
+                      <span className="text-blue-600 dark:text-blue-400 font-bold">中等</span>
+                    </div>
+                    <p className="text-sm font-medium">45个空格</p>
+                    <p className="text-xs text-muted-foreground">需要一定技巧</p>
+                  </div>
+                  <div className="text-center">
+                    <div className="w-12 h-12 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg flex items-center justify-center mx-auto mb-2">
+                      <span className="text-yellow-600 dark:text-yellow-400 font-bold">困难</span>
+                    </div>
+                    <p className="text-sm font-medium">50个空格</p>
+                    <p className="text-xs text-muted-foreground">挑战逻辑思维</p>
+                  </div>
+                  <div className="text-center">
+                    <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center mx-auto mb-2">
+                      <span className="text-orange-600 dark:text-orange-400 font-bold">专家</span>
+                    </div>
+                    <p className="text-sm font-medium">55个空格</p>
+                    <p className="text-xs text-muted-foreground">需要高级技巧</p>
+                  </div>
+                  <div className="text-center">
+                    <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center mx-auto mb-2">
+                      <span className="text-red-600 dark:text-red-400 font-bold">大师</span>
+                    </div>
+                    <p className="text-sm font-medium">60个空格</p>
+                    <p className="text-xs text-muted-foreground">专家级挑战</p>
+                  </div>
+                  <div className="text-center">
+                    <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center mx-auto mb-2">
+                      <span className="text-purple-600 dark:text-purple-400 font-bold">极限</span>
+                    </div>
+                    <p className="text-sm font-medium">65个空格</p>
+                    <p className="text-xs text-muted-foreground">最高难度</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </section>
+      )}
 
       <footer className="border-t bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/60 mt-16 border-border/50">
         <div className="container mx-auto px-4 py-8">
