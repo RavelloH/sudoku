@@ -78,8 +78,7 @@ export default function RootLayout({
         {/* Custom Analytics */}
         <Script
           defer
-          src="https://analytics.ravelloh.top/script.js"
-          data-website-id="66dd4070-59ae-4a68-a68e-fe671dcae7cd"
+          src="https://insight.ravelloh.com/script.js?siteId=7ee01189-8d0e-4991-8607-c9e6df84e024"
           strategy="afterInteractive"
         />
 
